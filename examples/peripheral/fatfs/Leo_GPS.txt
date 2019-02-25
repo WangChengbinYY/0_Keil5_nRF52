@@ -1,0 +1,13 @@
+//---------使用说明
+1、GPS使用 串口；
+2、串口调用方法：
+    初始化串口           APP_UART_FIFO_INIT();
+    设置串口事件回调函数  Leo_UART_Event_Handler
+3、配置文件需要打开以下权限：  sdk_config.h
+    nRF_Drivers     NRFX_UART_ENABLED   1
+                    NRFX_UARTE_ENABLED  可选
+                            UARTE：isUART with EasyDMA(EasyDMA is an easy-to-use direct memory access);可以直接对 存储空间操作不需要经过CPU的方式
+                    UART_ENABLED        1
+                    APP_FIFO_ENABLED    1
+4、所需的库见文件夹内包含的
+5、所需的头文件 见 代码

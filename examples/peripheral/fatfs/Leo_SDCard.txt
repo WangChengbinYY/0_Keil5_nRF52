@@ -1,0 +1,11 @@
+//---------使用说明
+1、SDCard的存储  主要使用SPI  和 FATFS
+2、配置文件需要打开以下权限：  sdk_config.h
+            NRFX_SPIM_ENABLED 1     SPI 主设备 使能
+            NRFX_SPI_ENABLED 1      SPI 通信 使能
+            SPI_ENABLED 1           SPI 驱动 使能
+4、所需的库见文件夹内包含的
+5、所需的头文件 见 代码
+
+注： SPI 的 操作，有了新的库，app_spi,可以自动管理SPI的通信，并且可以通过Schedule 设置多个不同配置的spi模式，以后使用可以借鉴，主要用于LCD的显示吧！
+    或者 以后多个 IMU 数据的采集，是否可以考虑采用这个库！！！！

@@ -1,0 +1,10 @@
+//---------使用说明
+1、电池电量检测
+    电量电压 低于 3.1V 就报警
+2、配置文件需要打开以下权限：  sdk_config.h
+    nRF_Drivers        
+        NRFX_SAADC_ENABLED 1
+        SAADC_ENABLED 1    - nrf_drv_saadc - SAADC peripheral driver - legacy layer
+        
+4、所需的库见文件夹内包含的
+5、所需的头文件 见 代码

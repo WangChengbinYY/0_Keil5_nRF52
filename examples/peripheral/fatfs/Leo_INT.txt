@@ -1,0 +1,16 @@
+//---------使用说明
+1、外部中断设置，其实也就是GPIO的设置，需要增加 中断响应函数而已；
+2、需要注意的是，不要在中断内部添加太复杂的语句，否则会影响别的线程操作，最好仅仅是对 标志位的改变！
+3、配置文件需要打开以下权限：  sdk_config.h
+    nRF_Drivers     
+                    GPIOTE_ENABLED     1
+                        GPIOTE(GPIO tasks and events),将GPIO的输入作为触发事件，可以直接触发 通道 另外一端的任务（PPI模式），一共有8个通道可用!
+                            PPI:The Programmable peripheral interconnect (PPI) enables peripherals to interact autonomously with each other 
+                                using tasks and events independent of the CPU.
+    nRF_Libraries 
+                    APP_GPIOTE_ENABLED 0  
+                        这个是 app 层的库，主要是进行 GPIOTE 功能的实现，目前用不到！！！！
+                    
+    综上：目前对于中断的设置主要使用 nrfx_drv_gpiote 的 实现即可！！，以后若是考虑 PPI 的使用，可以看看 APP_GPIOTE的用法
+4、所需的库见文件夹内包含的
+5、所需的头文件 见 代码
