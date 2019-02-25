@@ -20,6 +20,12 @@
 
 
 
+extern uint8_t     G_SDCard_FileIsOpen;               //标记是否已经打开文件
+
+
+
+
+
 
 /**
  * @brief  SDC block device definition
@@ -36,20 +42,15 @@ NRF_BLOCK_DEV_SDC_DEFINE(
 
 //  待完善
 
-extern uint8_t		               G_MPU9255_Data[28];
+//extern uint8_t		               G_MPU9255_Data[28];
 
 //<*MPU9255中断触发的计数器，用于后期统计是否丢包
-extern uint32_t	                   G_MPU9255_Counter;
+//extern uint32_t	                   G_MPU9255_Counter;
 
 //<*GPS数据接收缓存 和 解析后的数据包
-extern struct minmea_sentence_rmc  G_GPS_RMC;
-extern uint8_t                     G_GPS_RMC_IsValide;
+//extern struct minmea_sentence_rmc  G_GPS_RMC;
+//extern uint8_t                     G_GPS_RMC_IsValide;
 /*-------------------------------------------------------------------*/
-
-
-extern uint8_t     G_SDCard_FileIsOpen;               //标记是否已经打开文件
-
-
 
 
 static FATFS fs;

@@ -25,17 +25,31 @@
 *********************************************************************************************************
 */
 
-extern uint32_t	        G_MPU9255_Counter; 
-
+extern uint8_t     G_SDCard_FileIsOpen;               //标记是否已经打开文件
 extern uint32_t         G_GPSWeekSecond;
 extern uint16_t         G_MicroSecond;
 
-extern TaskHandle_t     xTaskHandle_MPU9255_RxData;
-extern TaskHandle_t     xTaskHandle_DataSave_Start;         /*开始存储数据           句柄 */
-extern TaskHandle_t     xTaskHandle_DataSave_End;
+extern TaskHandle_t    xTaskHandle_SDCard_Open;         /*SDCard 新建文件任务  句柄 */
+extern TaskHandle_t    xTaskHandle_SDCard_Close;         /*SDCard 关闭文件任务  句柄 */
 
 
-extern uint8_t          G_Ctrl_DataSave;
+
+
+
+
+
+
+
+//extern uint32_t	        G_MPU9255_Counter; 
+
+
+
+//extern TaskHandle_t     xTaskHandle_MPU9255_RxData;
+//extern TaskHandle_t     xTaskHandle_DataSave_Start;         /*开始存储数据           句柄 */
+//extern TaskHandle_t     xTaskHandle_DataSave_End;
+
+
+
 
 
 /*
@@ -50,6 +64,72 @@ extern uint8_t          G_Ctrl_DataSave;
 /*----------------------------------------------------------------------*/
 static void vINTHandler_SDCard(nrfx_gpiote_pin_t pin, nrf_gpiote_polarity_t action)
 {
+    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+    if(nrf_gpio_pin_read(configGPIO_INT_SDCard) == 0)
+    {
+        if(G_SDCard_FileIsOpen == 1)
+        {
+            //通知 关闭文件操作任务
+            xTaskNotifyFromISR(xTaskHandle_SDCard_Close,    
+                                0,           
+                                eNoAction,
+                                &xHigherPriorityTaskWoken);            
+            portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+        }
+        
+        nrfx_gpiote_out_toggle(configGPIO_LED_R);
+        //任务分析
+//        NRF_LOG_INFO("TEST:   SDCard INT is ok!");
+//        NRF_LOG_FLUSH();
+//        
+//        uint8_t pcWriteBuffer[300];
+//        NRF_LOG_INFO("=================================================");
+//        NRF_LOG_INFO("\nname      namestate  priority   rest   number");
+//        vTaskList((char *)&pcWriteBuffer);
+//        NRF_LOG_INFO("\n%s",pcWriteBuffer);
+//        NRF_LOG_FLUSH();
+//        
+//        NRF_LOG_INFO("=================================================");
+//        NRF_LOG_INFO("\nname       counter         reate");
+//        vTaskGetRunTimeStats((char *)&pcWriteBuffer);
+//        NRF_LOG_RAW_INFO("\n%s",pcWriteBuffer);
+//        NRF_LOG_FLUSH();  
+        
+        
+    }   
+//        
+//        
+//        
+//        nrf_delay_ms(2);
+//        if(nrf_gpio_pin_read(configGPIO_INT_SDCard) == 0)
+//        {
+//            NRF_LOG_INFO("Fuck");
+//            NRF_LOG_FLUSH(); 
+//            nrfx_gpiote_out_toggle(configGPIO_LED_R);
+//            
+//            if(G_SDCard_FileIsOpen == 0)
+//            {
+//                //通知 打开文件操作任务        
+//                xTaskNotifyFromISR(xTaskHandle_SDCard_Open,    
+//                                    0,           
+//                                    eNoAction,
+//                                    &xHigherPriorityTaskWoken);            
+//                portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+//                
+//            }else
+//            {
+//                //通知 关闭文件操作任务
+//                xTaskNotifyFromISR(xTaskHandle_SDCard_Close,    
+//                                    0,           
+//                                    eNoAction,
+//                                    &xHigherPriorityTaskWoken);            
+//                portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+//            }
+//        }
+
+//        
+//    }
+//    
 //    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 //    if(G_Ctrl_DataSave == 0)
 //    {
@@ -72,23 +152,9 @@ static void vINTHandler_SDCard(nrfx_gpiote_pin_t pin, nrf_gpiote_polarity_t acti
 //    }
 
 //    
-//#if Leo_Debug
-//    NRF_LOG_INFO("TEST:   SDCard INT is ok!");
-//    NRF_LOG_FLUSH();
-//    
-//    uint8_t pcWriteBuffer[300];
-//    NRF_LOG_INFO("=================================================");
-//    NRF_LOG_INFO("\nname      namestate  priority   rest   number");
-//    vTaskList((char *)&pcWriteBuffer);
-//    NRF_LOG_INFO("\n%s",pcWriteBuffer);
-//    NRF_LOG_FLUSH();
-//    
-//    NRF_LOG_INFO("=================================================");
-//    NRF_LOG_INFO("\nname       counter         reate");
-//    vTaskGetRunTimeStats((char *)&pcWriteBuffer);
-//    NRF_LOG_RAW_INFO("\n%s",pcWriteBuffer);
-//    NRF_LOG_FLUSH();    
-//#endif
+
+  
+
     
 }
 

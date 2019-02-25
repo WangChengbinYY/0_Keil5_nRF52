@@ -20,30 +20,9 @@
 #include "Leo_TIMER.h"
 #include "Leo_SDCard.h"
 
-/*=========================================== »ŒŒÒ”≈œ»º∂…Ë∂® ============================================*/
-/* 0º∂ */
-#define taskPRIO_INIT                        0          /* œµÕ≥≥ı ºªØ£∫Ωˆ‘⁄ø™ º÷¥––“ª¥Œ£¨≥ı ºªØ ß∞‹‘ÚΩ¯»ÎÀ¿—≠ª∑LED≤ªÃ˝…¡À∏*/
-#define taskPRIO_LED_SLOW                    0          /* LED¬˝…¡(1s“ª…¡)£∫(¥˙±ÌGPS≥ı º∂®Œª≥…π¶£¨≤¢ªÒ»° ±º‰)   */
-#define taskPRIO_LED_QUICK                   0          /* LEDøÏ…¡(500ms)£∫(¥˙±ÌSDCardµƒ¥Ê¥¢ªÚÕ£÷π≤Ÿ◊˜≥…π¶)   */
-
-/* 1º∂ */
-#define taskPRIO_GPS_RxData                  1          //Ω” ’GPS ˝æ›≤¢Ω‚Œˆ£¨Ω‚Œˆ≥…π¶£¨Õ®÷™¥Ê¥¢ 
-#define taskPRIO_SDCard_Start                1          //SDCardΩ®¡¢Œƒº˛≥…π¶  ±Í÷æŒª÷√1   ˝æ›ª·±ª¥Ê¥¢
-#define taskPRIO_SDCard_End                  1          //SDCardπÿ±’Œƒº˛≥…π¶  ±Í÷æŒª÷√0   ˝æ›≤ªª·¥Ê¥¢
-
-/* 2º∂ */
-#define taskPRIO_SDCard_Save                 2          //SDCard¥Ê¥¢ ˝æ›
-
-/* 3º∂ */
-#define taskPRIO_CollectData                 3          //≤…ºØIMU ˝æ›°¢—π¡¶ ˝æ›£¨≥…π¶‘ÚÕ®÷™¥Ê¥¢
-
-/* 4º∂ */
-#define taskPRIO_UWB_RxData                  4          //≤…ºØUWB≤‚æ‡ ˝æ›£¨≥…π¶‘ÚÕ®÷™¥Ê¥¢
 
 
-
-
-/*======================================= »´æ÷±‰¡ø∂®“Â ¥˝∂®£°£°£°£°£°£°==================================================*/
+/*========================== »´æ÷±‰¡ø∂®“Â£°================================*/
 /* »´æ÷±‰¡ø_ ±º‰≤Œ ˝ */
 uint32_t    G_GPSWeekSecond;                   //GPS÷‹ƒ⁄√Î ˝æ›
 uint16_t    G_MicroSecond;                     //nRF52 ±º‰º∆ ˝∆˜øÿ÷∆µƒ 1sµƒ1000º∆ ˝÷µ£¨”…Õ‚≤øGPSµƒ1PPS–£◊º 1PPS¥•∑¢ ± Ω´∆‰÷√0
@@ -52,17 +31,21 @@ uint16_t    G_MicroSecond;                     //nRF52 ±º‰º∆ ˝∆˜øÿ÷∆µƒ 1sµƒ1000º
 uint8_t     G_SDCard_FileIsOpen;               //±Íº« «∑Ò“—æ≠¥Úø™Œƒº˛ √ª¥Úø™£¨ƒ¨»œŒ™0
 
 /* »´æ÷±‰¡ø_IMU ˝æ›≤…ºØµƒ SPI2  µ¿˝£®UWB ”√SPI0£ªSDCard ”√SPI1£ª IMU ∫Õ —π¡¶¥´∏–∆˜ ”√SPI2£© */
-nrf_drv_spi_t   SPI_CollectData = NRF_DRV_SPI_INSTANCE(configGPIO_SPI_CollectData_INSTANCE);  			//MPU9255 π”√µƒSPI µ¿˝		
-uint8_t         G_MPU9255_SPI_xfer_Done = 1;
+nrf_drv_spi_t   SPI_CollectData = NRF_DRV_SPI_INSTANCE(configGPIO_SPI_CollectData_INSTANCE);	
+
+uint8_t	    G_CollectData[512];                 //SDCard“™¥¢¥Ê ˝æ›µƒª∫¥Ê
+uint16_t	    G_CollectData_Counter;                 
+
+uint8_t	    G_IMU_Data1[28];                    //µ⁄“ª◊ÈMPU9255¥Ê∑≈µƒ ˝æ›
+uint8_t	    G_IMU_Data2[28];                    //µ⁄∂˛◊ÈMPU9255¥Ê∑≈µƒ ˝æ›
+uint8_t	    G_IMUData_Counter;                  //MPU9255÷–∂œ¥•∑¢µƒº∆ ˝∆˜	    
 
 
-uint8_t	    G_MPU9255_MAG_ASAXYZ[6];            //AK8963¥≈«øº∆∂¡≥ˆµƒ¡È√Ù∂»–ﬁ’˝≤Œ ˝ ˝æ› 2~4
-uint8_t	    G_MPU9255_MAG_ASAXYZ_IsValid;       /*µ±«∞ ˝æ› «∑Ò”––ß 1”––ß 0Œﬁ–ß*/
 
-uint8_t     G_WRONG_Record[10];                 //≤…ºØπ˝≥Ã ˝æ›≥ˆ¥Ìµƒº«¬º
 
-uint8_t	    G_MPU9255_Data[28];                 //MPU9255¥´∏–∆˜¥Ê∑≈µƒ ˝æ›
-uint8_t	    G_MPU9255_Counter;                  //MPU9255÷–∂œ¥•∑¢µƒº∆ ˝∆˜
+
+
+
 
 //uint8_t     G_GPS_Data[33];                     //GPSΩ” ’ ˝æ›
 
@@ -84,60 +67,122 @@ uint8_t	    G_MPU9255_Counter;                  //MPU9255÷–∂œ¥•∑¢µƒº∆ ˝∆˜
 //uint8_t     G_Ctrl_DataSave;                    /*  ˝æ›¥Ê¥¢øÿ÷∆±Í÷æŒª 1¥Ê¥¢£¨0≤ª¥Ê¥¢ */
 
 
+
+
+
+
+
+
+
+
+/*=========================================== »ŒŒÒ”≈œ»º∂…Ë∂® ============================================*/
+/* 0º∂ */
+#define taskPRIO_INIT                        0          /* œµÕ≥≥ı ºªØ£∫Ωˆ‘⁄ø™ º÷¥––“ª¥Œ£¨≥ı ºªØ ß∞‹‘ÚΩ¯»ÎÀ¿—≠ª∑LED≤ªÃ˝…¡À∏*/
+#define taskPRIO_LED_SLOW                    0          /* LED¬˝…¡(1s“ª…¡)£∫(¥˙±ÌGPS≥ı º∂®Œª≥…π¶£¨≤¢ªÒ»° ±º‰)   */
+#define taskPRIO_LED_QUICK                   0          /* LEDøÏ…¡(500ms)£∫(¥˙±ÌSDCardµƒ¥Ê¥¢ªÚÕ£÷π≤Ÿ◊˜≥…π¶)   */
+
+/* 1º∂ */
+#define taskPRIO_GPS_RxData                  1          //Ω” ’GPS ˝æ›≤¢Ω‚Œˆ£¨Ω‚Œˆ≥…π¶£¨Õ®÷™¥Ê¥¢ 
+#define taskPRIO_SDCard_Open                 1          //SDCardΩ®¡¢Œƒº˛≥…π¶  ±Í÷æŒª÷√1   ˝æ›ª·±ª¥Ê¥¢
+#define taskPRIO_SDCard_Close                1          //SDCardπÿ±’Œƒº˛≥…π¶  ±Í÷æŒª÷√0   ˝æ›≤ªª·¥Ê¥¢
+
+/* 2º∂ */
+#define taskPRIO_SDCard_Save                 2          //SDCard¥Ê¥¢ ˝æ›
+
+/* 3º∂ */
+#define taskPRIO_CollectData                 3          //≤…ºØIMU ˝æ›°¢—π¡¶ ˝æ›£¨≥…π¶‘ÚÕ®÷™¥Ê¥¢
+
+/* 4º∂ */
+#define taskPRIO_UWB_RxData                  4          //≤…ºØUWB≤‚æ‡ ˝æ›£¨≥…π¶‘ÚÕ®÷™¥Ê¥¢
+
+
+/*=========================================== »ŒŒÒœ‡πÿ±‰¡ø ============================================*/
 /**
  * »´æ÷±‰¡ø_»ŒŒÒ∫Ø ˝æ‰±˙
 */
 TaskHandle_t    xTaskHandle_TaskINIT            = NULL;         /*œµÕ≥≥ı ºªØ»ŒŒÒ       æ‰±˙ */
-TaskHandle_t    xTaskHandle_LEDSLOW             = NULL;
-TaskHandle_t    xTaskHandle_LEDQUICK            = NULL;         //3søÏ…¡
-TaskHandle_t    xTaskHandle_GPS_RxData          = NULL;         /*GPS ˝æ›≤…ºØ»ŒŒÒ       æ‰±˙*/
-TaskHandle_t    xTaskHandle_SDCard_Start        = NULL;         /*ø™ º¥Ê¥¢ ˝æ›           æ‰±˙ */
-TaskHandle_t    xTaskHandle_SDCard_End          = NULL;         /*Õ£÷π¥Ê¥¢ ˝æ›           æ‰±˙ */
-TaskHandle_t    xTaskHandle_SDCard_Save         = NULL;         //SDCard¥Ê¥¢ ˝æ›
-TaskHandle_t    xTaskHandle_CollectData         = NULL;         //≤…ºØ ˝æ› IMU —π¡¶
-TaskHandle_t    xTaskHandle_UWB_RxData          = NULL;         //≤…ºØUWB≤‚æ‡ ˝æ›
+TaskHandle_t    xTaskHandle_CollectData         = NULL;         /*5ms¥•∑¢µƒ≤…ºØ»ŒŒÒ    æ‰±˙ */
+TaskHandle_t    xTaskHandle_SDCard_Save         = NULL;         /*SDCard¥Ê¥¢»ŒŒÒ       æ‰±˙ */
+TaskHandle_t    xTaskHandle_SDCard_Open         = NULL;         /*SDCard –¬Ω®Œƒº˛»ŒŒÒ  æ‰±˙ */
+TaskHandle_t    xTaskHandle_SDCard_Close        = NULL;         /*SDCard πÿ±’Œƒº˛»ŒŒÒ  æ‰±˙ */
 
 
 /**
- * »´æ÷±‰¡ø_◊ ‘¥ª•≥‚¡ø  ¥˝ÕÍ…∆  
- *      “™∑÷±øº¬«º∏∏ˆ ˝æ›¥Ê¥¢µƒ π”√£¨IMU —π¡¶ “ª◊È£ª≤‚æ‡ “ª◊È£ªGPS “ª◊È
+ * »´æ÷±‰¡ø_ª•≥‚¡ø_SDCardª∫¥Ê  
 */
-SemaphoreHandle_t   xMutex_SDCDBuffer_1         = NULL;
+SemaphoreHandle_t   xMutex_SDCDBuffer           = NULL;
+
+
+
+
+
+/*======================================= »´æ÷±‰¡ø∂®“Â ¥˝∂®£°£°£°£°£°£°==================================================*/
+/* »´æ÷±‰¡ø_ ±º‰≤Œ ˝ */
+//uint32_t    G_GPSWeekSecond;                   //GPS÷‹ƒ⁄√Î ˝æ›
+//uint16_t    G_MicroSecond;                     //nRF52 ±º‰º∆ ˝∆˜øÿ÷∆µƒ 1sµƒ1000º∆ ˝÷µ£¨”…Õ‚≤øGPSµƒ1PPS–£◊º 1PPS¥•∑¢ ± Ω´∆‰÷√0
+
+///* »´æ÷±‰¡ø_SDCardŒƒº˛≤Ÿ◊˜±Í ∂ */                                                        
+//uint8_t     G_SDCard_FileIsOpen;               //±Íº« «∑Ò“—æ≠¥Úø™Œƒº˛ √ª¥Úø™£¨ƒ¨»œŒ™0
+
+///* »´æ÷±‰¡ø_IMU ˝æ›≤…ºØµƒ SPI2  µ¿˝£®UWB ”√SPI0£ªSDCard ”√SPI1£ª IMU ∫Õ —π¡¶¥´∏–∆˜ ”√SPI2£© */
+//nrf_drv_spi_t   SPI_CollectData = NRF_DRV_SPI_INSTANCE(configGPIO_SPI_CollectData_INSTANCE);  			//MPU9255 π”√µƒSPI µ¿˝		
+//uint8_t         G_MPU9255_SPI_xfer_Done = 1;
+
+//uint8_t     G_WRONG_Record[10];                 //≤…ºØπ˝≥Ã ˝æ›≥ˆ¥Ìµƒº«¬º
+
+//uint8_t	    G_IMU_Data[28];                 //MPU9255¥´∏–∆˜¥Ê∑≈µƒ ˝æ›
+//uint8_t	    G_IMUData_Counter;                  //MPU9255÷–∂œ¥•∑¢µƒº∆ ˝∆˜
+
+//uint8_t     G_GPS_Data[33];                     //GPSΩ” ’ ˝æ›
+
+//uint8_t     G_FOOTPressure_Data[25];            //◊„≤ø—π¡¶¥´∏–∆˜ ˝æ›
+//uint8_t	    G_FOOTPressure_Counter;             //◊„≤ø—π¡¶¥´∏–∆˜ ˝æ›µƒº∆ ˝∆˜
+
+//uint8_t     G_UWBDistance_Data[12];             //UWB≤‚æ‡¥´∏–∆˜ ˝æ›
+//uint8_t	    G_UWBDistance_Counter;              //UWB≤‚æ‡¥´∏–∆˜ ˝æ›µƒº∆ ˝∆˜
+
+
+//uint8_t	    G_SDCDBuffer1[1024];               //À´ª∫¥Êbuffer
+//uint16_t	G_SDCDBuffer1_NUM;	
+//uint8_t	    G_SDCDBuffer2[1024];
+//uint16_t	G_SDCDBuffer2_NUM;	
+
+///**
+// * »´æ÷±‰¡ø_œµÕ≥øÿ÷∆   ¥˝ÕÍ…∆
+//*/
+//uint8_t     G_Ctrl_DataSave;                    /*  ˝æ›¥Ê¥¢øÿ÷∆±Í÷æŒª 1¥Ê¥¢£¨0≤ª¥Ê¥¢ */
+
+
+
 
 
 
 /**
  * »´æ÷±‰¡ø≥ı ºªØ∫Ø ˝   ¥˝ÕÍ…∆  
 */
-void vInitial_Variable(void)
+static void vINIT_Variable(void)
 {
     G_GPSWeekSecond     = 0;                    //GPS÷‹ƒ⁄√Î ˝æ›
     G_MicroSecond       = 0;                    //nRF52 ±º‰º∆ ˝∆˜øÿ÷∆µƒ 1sµƒ1000º∆ ˝÷µ£¨
                                                         //”… Õ‚≤øGPSµƒ1PPS–£◊º 1PPS¥•∑¢ ± Ω´∆‰÷√0
     G_SDCard_FileIsOpen = 0;                    //±Íº« «∑Ò“—æ≠¥Úø™Œƒº˛ √ª¥Úø™£¨ƒ¨»œŒ™0
     
+    memset(G_CollectData,0,512);
+    G_CollectData_Counter = 0;
     
-//    
-//    
-//    //AK8963¥≈«øº∆∂¡≥ˆµƒ¡È√Ù∂»–ﬁ’˝≤Œ ˝ 2~4
-//    memset(G_MPU9255_MAG_ASAXYZ,0,6);
-//	G_MPU9255_MAG_ASAXYZ[0] = 0xC1;
-//	G_MPU9255_MAG_ASAXYZ[1] = 0xC2;
-//    G_MPU9255_MAG_ASAXYZ[5] = 0xFF;   
-//    G_MPU9255_MAG_ASAXYZ_IsValid = 0;
-//    
-//    //≤…ºØπ˝≥Ã ˝æ›≥ˆ¥Ìµƒº«¬º 
-//    memset(G_WRONG_Record,0,10);
-//    G_WRONG_Record[0] = 0xC3;
-//	G_WRONG_Record[1] = 0xC4;
-//    G_WRONG_Record[9] = 0xFF;
-//    
-//    //MPU9255¥´∏–∆˜¥Ê∑≈µƒ ˝æ›
-//    memset(G_MPU9255_Data,0,28);
-//    G_MPU9255_Data[0] = 0xA1;
-//	G_MPU9255_Data[1] = 0xA2;
-//    G_MPU9255_Data[27] = 0xFF;
-//    G_MPU9255_Counter = 0;                              //MPU9255÷–∂œ¥•∑¢µƒº∆ ˝∆˜
+    //IMU ˝æ›
+    memset(G_IMU_Data1,0,28);
+    G_IMU_Data1[0] = 0xA1;
+	G_IMU_Data1[1] = 0xA2;
+    G_IMU_Data1[27] = 0xFF;
+    memset(G_IMU_Data2,0,28);
+    G_IMU_Data2[0] = 0xA1;
+	G_IMU_Data2[1] = 0xA3;
+    G_IMU_Data2[27] = 0xFF;
+    G_IMUData_Counter    = 0;                     
+    
+
+
 //    
 //    //GPSΩ” ’ ˝æ›
 //    memset(G_GPS_Data,0,33);
@@ -158,49 +203,23 @@ void vInitial_Variable(void)
 //	G_UWBDistance_Data[1] = 0xA8;
 //    G_UWBDistance_Data[11] = 0xFF;
 //    G_UWBDistance_Counter = 0;
-//    
-//    // ±º‰º∆ ˝
-//    G_GPSWeekSecond = 0;
-//    G_MicroSecond = 0;    
-
-//    //SDCard¥Ê¥¢buffer
-//    memset(G_SDCDBuffer1,0,1024);
-//    memset(G_SDCDBuffer2,0,1024);    
-//    G_SDCDBuffer1_NUM = 0;
-//    G_SDCDBuffer2_NUM =0;
-
-//    /*œµÕ≥øÿ÷∆œ‡πÿ*/
-//    G_Ctrl_DataSave = 0;
  
 }
 
 
-
-
-
-
-/*======================================= »ŒŒÒ µœ÷ new==================================================*/
 /*------------------------------------------------------------
- *SPIµƒªÿµ˜∫Ø ˝                                                                              
+ *Õ‚…Ëœ‡πÿµƒ≥ı ºªØ£¨÷˜“™∞¸¿®£∫
+ *  1°¢»´æ÷±‰¡ø≥ı ºªØ£ª
+ *  2°¢π‹ΩÃ≈‰÷√£∫LED ÷–∂œ£ª∂® ±∆˜µ»
+ *  3°¢∏˜¿‡¥´∏–∆˜(IMU GPS SDCard)µ»µƒ≥ı ºªØ
  *------------------------------------------------------------*/
-//static void Leo_MPU9255_SPI_Event_Handler(nrf_drv_spi_evt_t const * p_event,void * p_context){
-//	G_MPU9255_SPI_xfer_Done = 1;
-//}
-
-
-
-/*------------------------------------------------------------
- *≥ı ºªØ»ŒŒÒ   ∫Ø ˝  ÷ª÷¥––“ª¥Œ                                                                              
- *------------------------------------------------------------*/
-static void vTask_StartINIT(void *pvParameters)
+static uint8_t ucINIT_Peripheral()
 {
     uint8_t err_code = 0;
-    BaseType_t txResult = pdPASS;
-
 /**
  * 0. »´æ÷±‰¡ø≥ı ºªØ    
  */    
-    vInitial_Variable();    
+    vINIT_Variable();    
     
 /**
  * 1. GPIOπ‹Ω≈…Ë∂®    
@@ -230,22 +249,21 @@ static void vTask_StartINIT(void *pvParameters)
     err_code |= ucTimerInitial_4();
     NRF_LOG_INFO(("||Initialize||-->TIMER---------->error  0x%x"),err_code);  
     NRF_LOG_FLUSH();
-/*----------------------------------------------------------------------------*/    
 
 /**
  * 3. ≥ı ºªØSDCard ≤¢Ω®¡¢º«¬ºŒƒº˛    
  */
     err_code |= ucSDCard_INIT();   
     err_code |= ucSDCard_OpenFile();      
-    
-    nrf_delay_ms(1000);
-    err_code |= ucSDCard_SaveData(&err_code,sizeof(err_code));
-    err_code |= ucSDCard_CloseFile();
+    //LeoDebug
+//    nrf_delay_ms(1000);
+//    err_code |= ucSDCard_SaveData(&err_code,sizeof(err_code));
+//    err_code |= ucSDCard_CloseFile();
     NRF_LOG_INFO(("||Initialize||-->SDCard--------->error  0x%x"),err_code); 
     NRF_LOG_FLUSH();   
     
 /**
- * 4. ≥ı ºªØ IMU¥´∏–∆˜ 
+ * 4. ≥ı ºªØ ¡Ω∏ˆMPU 
  */
     /* (1) ≥ı ºªØµ⁄“ª∏ˆMPU9255_A  */   
     nrf_drv_spi_config_t SPI_config = NRF_DRV_SPI_DEFAULT_CONFIG;
@@ -270,17 +288,8 @@ static void vTask_StartINIT(void *pvParameters)
     //–∂‘ÿSPI
     nrf_drv_spi_uninit(&SPI_CollectData);	
   
-    /* (2) ≥ı ºªØµ⁄∂˛∏ˆMPU9255_B  */   
- 	SPI_config.sck_pin 			= configGPIO_SPI_CollectData_SCK;
-	SPI_config.mosi_pin 		= configGPIO_SPI_CollectData_MOSI;
-	SPI_config.miso_pin 		= configGPIO_SPI_CollectData_MISO;   
-    SPI_config.ss_pin			= configGPIO_SPI_MPU2_CS;               //µ⁄“ª∏ˆIMUµƒnCSπ‹Ω≈
-	SPI_config.irq_priority	    = SPI_DEFAULT_CONFIG_IRQ_PRIORITY;		//œµÕ≥SPI÷–∂œ»®œﬁƒ¨»œ…Ë∂®Œ™ 7 
-	SPI_config.orc				= 0xFF;
-	SPI_config.frequency		= NRF_DRV_SPI_FREQ_500K;				//MPU9255 SPI π”√µƒ∑∂ŒßŒ™ 100KHz~1MHz
-    //SPI_config.frequency		= NRF_DRV_SPI_FREQ_1M;
-	SPI_config.mode             = NRF_DRV_SPI_MODE_0;                     
-    SPI_config.bit_order        = NRF_DRV_SPI_BIT_ORDER_MSB_FIRST;	
+    /* (2) ≥ı ºªØµ⁄∂˛∏ˆMPU9255_B  */  
+    SPI_config.ss_pin			= configGPIO_SPI_MPU2_CS;               //µ⁄∂˛∏ˆIMUµƒnCSπ‹Ω≈
 	//“¿æ›≈‰÷√≤Œ ˝ ∂‘  µ¿˝spi Ω¯––≥ı ºªØ 
     err_code |= nrf_drv_spi_init(&SPI_CollectData, &SPI_config, NULL,NULL);	
     NRF_LOG_INFO(("||Initialize||-->SPI_IMU_2------>error  0x%x"),err_code); 
@@ -291,8 +300,13 @@ static void vTask_StartINIT(void *pvParameters)
     NRF_LOG_FLUSH();   
     //–∂‘ÿSPI
     nrf_drv_spi_uninit(&SPI_CollectData);	       
-    
-   /* (3) ≈‰÷√’˝»∑µƒSPI ˝æ›≤…ºØ  */   
+
+/**
+ * 5. ≈‰÷√’˝»∑µƒSPI£¨µ»¥˝∆¨—°π‹Ω≈…Ë÷√ 
+ */
+    SPI_config.ss_pin			= NRF_DRV_SPI_PIN_NOT_USED;         //≤ª π”√nCSπ‹Ω≈
+    SPI_config.frequency		= NRF_DRV_SPI_FREQ_1M;
+    err_code |= nrf_drv_spi_init(&SPI_CollectData, &SPI_config, NULL,NULL);	
    //µ⁄“ª∏ˆSPI ∆¨—°
     nrfx_gpiote_out_uninit(configGPIO_SPI_MPU1_CS);
     err_code |= nrfx_gpiote_out_init(configGPIO_SPI_MPU1_CS,&tconfigGPIO_OUT);
@@ -305,6 +319,312 @@ static void vTask_StartINIT(void *pvParameters)
     NRF_LOG_FLUSH(); 
     
     
+    return err_code;
+}
+
+
+
+
+/*------------------------------------------------------------
+ *SDCard–¬Ω®Œƒº˛»ŒŒÒ ∫Ø ˝
+ *------------------------------------------------------------*/
+static void vTask_SDCard_Open(void *pvParameters)
+{
+    uint8_t i = 0;
+    uint8_t erro_code = 0;
+    while(1)
+    {
+        /*(1) µ»¥˝»ŒŒÒÕ®÷™     */
+        xTaskNotifyWait(0x00000000,     
+                        0xFFFFFFFF,     
+                        NULL,                 /* ±£¥ÊulNotifiedValueµΩ±‰¡øulValue÷– »Áπ˚≤ª”√ø…“‘…ËŒ™NULL */
+                        portMAX_DELAY);       /* ◊Ó¥Û‘ –Ì—”≥Ÿ ±º‰ portMAX_DELAY ±Ì æ”¿‘∂µ»¥˝*/
+        
+        erro_code = ucSDCard_OpenFile();
+        if(erro_code == 0)
+        {
+            for(i=0;i<15;i++)
+            {
+                nrfx_gpiote_out_toggle(configGPIO_LED_R);
+                nrf_delay_ms(200);
+            } 
+            G_SDCard_FileIsOpen = 1;
+            nrfx_gpiote_out_clear(configGPIO_LED_R);
+        }        
+    }
+}
+
+/*------------------------------------------------------------
+ *SDCardπÿ±’Œƒº˛»ŒŒÒ ∫Ø ˝
+ *------------------------------------------------------------*/
+static void vTask_SDCard_Close(void *pvParameters)
+{
+    uint8_t i = 0;
+    uint8_t erro_code = 0;
+    while(1)
+    {
+        /*(1) µ»¥˝»ŒŒÒÕ®÷™     */
+        xTaskNotifyWait(0x00000000,     
+                        0xFFFFFFFF,     
+                        NULL,                 /* ±£¥ÊulNotifiedValueµΩ±‰¡øulValue÷– »Áπ˚≤ª”√ø…“‘…ËŒ™NULL */
+                        portMAX_DELAY);       /* ◊Ó¥Û‘ –Ì—”≥Ÿ ±º‰ portMAX_DELAY ±Ì æ”¿‘∂µ»¥˝*/
+        
+        G_SDCard_FileIsOpen = 0;
+        erro_code = ucSDCard_CloseFile();
+        if(erro_code == 0)
+        {
+            for(i=0;i<15;i++)
+            {
+                nrfx_gpiote_out_toggle(configGPIO_LED_R);
+                nrf_delay_ms(200);
+            } 
+            nrfx_gpiote_out_clear(configGPIO_LED_R);
+            
+            NRF_LOG_INFO("File is Closed!!!");
+        }        
+    }
+}
+
+/*------------------------------------------------------------
+ *SDCard¥Ê¥¢»ŒŒÒ ∫Ø ˝
+ *------------------------------------------------------------*/
+static void vTask_SDCard_Save(void *pvParameters)
+{
+    uint8_t tData[512] = {0};
+    uint16_t tData_Count = 0;
+    uint8_t erro_code = 0;
+    while(1)
+    {
+        /*(1) µ»¥˝»ŒŒÒÕ®÷™     */
+        xTaskNotifyWait(0x00000000,     
+                        0xFFFFFFFF,     
+                        NULL,                 /* ±£¥ÊulNotifiedValueµΩ±‰¡øulValue÷– »Áπ˚≤ª”√ø…“‘…ËŒ™NULL */
+                        portMAX_DELAY);       /* ◊Ó¥Û‘ –Ì—”≥Ÿ ±º‰ portMAX_DELAY ±Ì æ”¿‘∂µ»¥˝*/
+        
+        /*(2) ªÒ»°◊ ‘¥     */
+//        if(G_CollectData_Counter >= 256)
+//        {
+
+            if(xSemaphoreTake( xMutex_SDCDBuffer, ( TickType_t ) 5 ) == pdTRUE)
+            {
+                memcpy(tData,G_CollectData,G_CollectData_Counter);
+                tData_Count = G_CollectData_Counter;
+                G_CollectData_Counter = 0; 
+                // Õ∑≈◊ ‘¥
+                xSemaphoreGive( xMutex_SDCDBuffer ); 
+//                NRF_LOG_INFO("%d",tData_Count);
+                //¥Ê¥¢ Œƒº˛»Áπ˚¥Úø™≤≈Õ˘¿Ô√Ê¥Ê¥¢
+                if(G_SDCard_FileIsOpen == 1)
+                {                    
+                    erro_code = ucSDCard_SaveData(tData,tData_Count);                    
+                }
+                //LEODEBUG
+                if(erro_code != 0)
+                {
+                    NRF_LOG_INFO("SDCard Save is Wrong!!!!!!!!!! %d",erro_code);
+                    NRF_LOG_FLUSH();                     
+                }                    
+            }else
+            {
+                //LOEDEBUG
+                NRF_LOG_INFO("SDCard_Buffer is Busy for SDCard!!!!!!!!!!");
+                NRF_LOG_FLUSH(); 
+            }
+            
+//        }else{
+//            continue;
+//        }
+    }        
+}
+
+
+
+
+/*------------------------------------------------------------
+ *Õ‚≤ø¥´∏–∆˜ ˝æ›≤…ºØ£¨÷˜“™∞¸¿®£∫
+ *  MPU9255A°¢MPU9255B°¢—π¡¶¥´∏–∆˜
+ *------------------------------------------------------------*/
+static void vTask_CollectData(void *pvParameters)
+{
+    while(1)
+    {
+        /*(1) µ»¥˝»ŒŒÒÕ®÷™     */
+        xTaskNotifyWait(0x00000000,     
+                        0xFFFFFFFF,     
+                        NULL,                 /* ±£¥ÊulNotifiedValueµΩ±‰¡øulValue÷– »Áπ˚≤ª”√ø…“‘…ËŒ™NULL */
+                        portMAX_DELAY);       /* ◊Ó¥Û‘ –Ì—”≥Ÿ ±º‰ portMAX_DELAY ±Ì æ”¿‘∂µ»¥˝*/      
+        
+        
+        /*(2) ≤…ºØMPU9255A µƒ ˝æ› */ 
+        nrfx_gpiote_out_clear(configGPIO_SPI_MPU1_CS);    
+        Leo_MPU9255_Read_ACC(G_IMU_Data1);
+        Leo_MPU9255_Read_Gyro(G_IMU_Data1);
+        Leo_MPU9255_Read_Magnetic(G_IMU_Data1);  
+        nrfx_gpiote_out_set(configGPIO_SPI_MPU1_CS);          
+        /*(3) ≤…ºØMPU9255B µƒ ˝æ› */        
+//        nrfx_gpiote_out_clear(configGPIO_SPI_MPU2_CS);    
+//        Leo_MPU9255_Read_ACC(G_IMU_Data2);
+//        Leo_MPU9255_Read_Gyro(G_IMU_Data2);
+//        Leo_MPU9255_Read_Magnetic(G_IMU_Data2);  
+//        nrfx_gpiote_out_set(configGPIO_SPI_MPU2_CS);          
+        /*(4) ≤…ºØ—π¡¶¥´∏–∆˜ µƒ ˝æ›  Œ¥ÕÍ≥…*/      
+        
+        
+        /*(5) ∂º≤…ºØÕÍ¡À,’˚ÃÂ¥Ê¥¢ 
+         *    µ»¥˝3ms£¨»Áπ˚ªπ√ª”– Õ∑≈£¨‘Ú∑≈∆˙¥À¥Œ¥Ê¥¢*/
+        if(xSemaphoreTake( xMutex_SDCDBuffer, ( TickType_t ) 4 ) == pdTRUE)
+        {
+            memcpy(G_CollectData+G_CollectData_Counter,G_IMU_Data1,sizeof(G_IMU_Data1));
+            G_CollectData_Counter = G_CollectData_Counter + sizeof(G_IMU_Data1);
+//            memcpy(G_CollectData+G_CollectData_Counter,G_IMU_Data2,sizeof(G_IMU_Data2));
+//            G_CollectData_Counter = G_CollectData_Counter + sizeof(G_IMU_Data2);        
+            // Õ∑≈◊ ‘¥
+            xSemaphoreGive( xMutex_SDCDBuffer ); 
+            //Õ®÷™ SDCard¥Ê¥¢»ŒŒÒ
+            xTaskNotify(xTaskHandle_SDCard_Save,     
+                        0,              
+                        eNoAction);                
+        }else
+        {
+            //LOEDEBUG
+            NRF_LOG_INFO("SDCard_Buffer is Busy for IMU!!!!!!!!!!!!");
+            NRF_LOG_FLUSH(); 
+        }
+
+    }
+}
+
+
+
+
+
+/*------------------------------------------------------------
+ *»ŒŒÒœ‡πÿµƒ≥ı ºªØ£¨÷˜“™∞¸¿®£∫
+ *  1°¢ª•≥‚¡øµƒ≥ı ºªØ
+ *  2°¢∏˜¿‡»ŒŒÒµƒ≥ı ºªØº∞∆Ù∂Ø
+ *------------------------------------------------------------*/
+static uint8_t ucINIT_Task()
+{
+    uint8_t erro_code = 0;
+    BaseType_t txResult = pdPASS;
+    
+    /*(1) ª•≥‚¡øµƒΩ®¡¢_SDCardª∫¥Ê */
+    xMutex_SDCDBuffer = xSemaphoreCreateMutex();
+    if(xMutex_SDCDBuffer == NULL)
+    {
+        erro_code = 1;
+    }
+    
+    /*(2) Ω®¡¢≤…ºØ»ŒŒÒ */
+    txResult = xTaskCreate(vTask_CollectData,
+                            "CollectData",
+                            configMINIMAL_STACK_SIZE+200,
+                            NULL,
+                            taskPRIO_CollectData,
+                            &xTaskHandle_CollectData);
+    if(txResult != pdPASS)
+    {
+        erro_code = 1;
+    }
+    
+    /*(3) Ω®¡¢SDCard¥Ê¥¢»ŒŒÒ */    
+    txResult = xTaskCreate(vTask_SDCard_Save,
+                            "SDCardSave",
+                            configMINIMAL_STACK_SIZE+400,
+                            NULL,
+                            taskPRIO_SDCard_Save,
+                            &xTaskHandle_SDCard_Save);
+    if(txResult != pdPASS)
+    {
+        erro_code = 1;
+    }    
+    
+    /*(4) Ω®¡¢SDCard –¬Ω®Œƒº˛»ŒŒÒ */      
+    txResult = xTaskCreate(vTask_SDCard_Open,
+                            "SDCardOpen",
+                            configMINIMAL_STACK_SIZE,
+                            NULL,
+                            taskPRIO_SDCard_Open,
+                            &xTaskHandle_SDCard_Open);
+    if(txResult != pdPASS)
+    {
+        erro_code = 1;
+    }     
+    
+    /*(4) Ω®¡¢SDCard πÿ±’Œƒº˛»ŒŒÒ */      
+    txResult = xTaskCreate(vTask_SDCard_Close,
+                            "SDCardClose",
+                            configMINIMAL_STACK_SIZE,
+                            NULL,
+                            taskPRIO_SDCard_Close,
+                            &xTaskHandle_SDCard_Close);
+    if(txResult != pdPASS)
+    {
+        erro_code = 1;
+    }       
+    
+    
+    return erro_code;  
+}
+    
+
+
+
+/*------------------------------------------------------------
+ *≥ı ºªØ»ŒŒÒ  ÷ª÷¥––“ª¥Œ                                                                              
+ *------------------------------------------------------------*/
+static void vTask_StartINIT(void *pvParameters)
+{
+    uint8_t err_code = 0;
+    BaseType_t txResult = pdPASS;
+    
+/**
+ * 0. Õ‚…Ëœ‡πÿ≥ı ºªØ
+ *      ≥ı ºªØ≥…π¶£¨∫Ïµ∆¡¡£ª
+ *      ≥ı ºªØ¥ÌŒÛ£¨∫Ïµ∆√£¨…æ≥˝≥ı ºªØ»ŒŒÒ≤¢ÕÀ≥ˆ    
+ */     
+    err_code |= ucINIT_Peripheral();
+    if(err_code != 0)
+    {
+        vTaskDelete(xTaskHandle_TaskINIT);
+        NRF_LOG_INFO("Peripheral Initialization is Wrong!!");
+        NRF_LOG_FLUSH();
+        return ;
+    }else{
+        nrfx_gpiote_out_clear(configGPIO_LED_R);
+    }    
+
+/**
+ * 1. »ŒŒÒœ‡πÿ≥ı ºªØ£®Ω®¡¢∫√∫Û£¨◊‘∂Ø∆Ù∂Ø£©
+ *      »ŒŒÒ≥ı ºªØ≥…π¶£¨∫Ïµ∆¡¡£ª
+ *      »ŒŒÒ≥ı ºªØ¥ÌŒÛ£¨∫Ïµ∆√£¨…æ≥˝≥ı ºªØ»ŒŒÒ≤¢ÕÀ≥ˆ       
+ */
+    err_code |= ucINIT_Task();
+    if(err_code != 0)
+    {
+        vTaskDelete(xTaskHandle_TaskINIT);
+        NRF_LOG_INFO("TASK Initialization is Wrong!!");
+        NRF_LOG_FLUSH();
+        return ;
+    }else{
+        nrfx_gpiote_out_clear(configGPIO_LED_R);
+    }       
+/**
+ * 2. ÷–∂œº∞∂® ±∆˜ ∆Ù∂Ø  Œ¥ÕÍ≥…
+ */
+    //(1)º∆ ±∆˜∆Ù∂Ø
+    err_code |= ucTimerStart_3();      /* TIMER3 º∆ ˝∆˜≥ı ºªØ*/ 
+    err_code |= ucTimerStart_4();
+    
+    //(2)÷–∂œ∆Ù∂Ø
+    ucINTStart_SDCard();
+/**
+ * 3. …æ≥˝∆Ù∂Ø»ŒŒÒ    
+ */
+    vTaskDelete(xTaskHandle_TaskINIT);
+    NRF_LOG_INFO("||  Start  ||-->TaskINI is Delete!!");
+    NRF_LOG_FLUSH();
+/*----------------------------------------------------------------------------*/      
     
 // 
 ///*----------------------------------------------------------------------------*/ 
@@ -348,20 +668,7 @@ static void vTask_StartINIT(void *pvParameters)
 ///**
 // * 8. ∫Õ»ŒŒÒœ‡πÿµƒ≥ı ºªØ 
 // */    
-//    /*(1) ª•≥‚¡øµƒΩ®¡¢ */
-//    xMutex_SDCDBuffer_1    = xSemaphoreCreateMutex();
-//    if(xMutex_SDCDBuffer_1 == NULL)
-//    {
-//        /* √ª”–¥¥Ω®≥…π¶£¨”√ªßø…“‘‘⁄’‚¿Ôº”»Î¥¥Ω® ß∞‹µƒ¥¶¿Ìª˙÷∆ */
-//        NRF_LOG_INFO("Warning Warning Warning......MutexCreate is Wrong!!!!!"); 
-//        NRF_LOG_FLUSH();
-//        //≥ˆ¥Ì£¨À¿—≠ª∑…¡À∏
-//        while(1)
-//        {
-//            nrf_delay_ms(250);
-//            nrf_gpio_pin_toggle(configGPIO_LED_R);            
-//        }        
-//    }
+
 //    
 //    /*(2) µ•¥Œ ±º‰»ŒŒÒµƒΩ®¡¢ ∆Ù∂Ø÷–∂œµ» */
 //    xTimers_StartINT = xTimerCreate("StartINT",             /* ∂® ±∆˜√˚◊÷ */
@@ -531,13 +838,7 @@ static void vTask_StartINIT(void *pvParameters)
 //    }  
 ///*----------------------------------------------------------------------------*/      
 //    
-/**
- * 9. …æ≥˝∆Ù∂Ø»ŒŒÒ    
- */
-    vTaskDelete(xTaskHandle_TaskINIT);
-    NRF_LOG_INFO("||  Start  ||-->TaskINI is Delete!!");
-    NRF_LOG_FLUSH();
-/*----------------------------------------------------------------------------*/    
+  
 
 }
 
@@ -643,9 +944,9 @@ uint8_t vTask_CreatTask(void)
 //                        portMAX_DELAY);       /* ◊Ó¥Û‘ –Ì—”≥Ÿ ±º‰ portMAX_DELAY ±Ì æ”¿‘∂µ»¥˝*/        
 //         /**
 //         *(2) ≤…ºØMPU9255 ˝æ› */
-//        memcpy(G_MPU9255_Data+2,&G_GPSWeekSecond,4);
-//        memcpy(G_MPU9255_Data+6,&G_MicroSecond,2);        
-//        memcpy(G_MPU9255_Data+8,&G_MPU9255_Counter,1); 
+//        memcpy(G_IMU_Data+2,&G_GPSWeekSecond,4);
+//        memcpy(G_IMU_Data+6,&G_MicroSecond,2);        
+//        memcpy(G_IMU_Data+8,&G_IMUData_Counter,1); 
 //        
 //        /* ≤…ºØ¥´∏–∆˜ ˝æ› */    
 //        Leo_MPU9255_Read_ACC();
@@ -659,14 +960,14 @@ uint8_t vTask_CreatTask(void)
 //            if(xSemaphoreTake( xMutex_SDCDBuffer_1, ( TickType_t ) 2 ) == pdTRUE)
 //            {   
 //                 /*  ”–¬©∂¥£¨”–ø…ƒ‹ª∫¥Ê“Á≥ˆ  »Áπ˚ ¥Ê¥¢≤ªº∞ ±µƒª∞£°£° */
-//                if(G_SDCDBuffer1_NUM + sizeof(G_MPU9255_Data) > 1024)
+//                if(G_SDCDBuffer1_NUM + sizeof(G_IMU_Data) > 1024)
 //                {
 //                    NRF_LOG_INFO("MPU9255 Can't Save, It's Full !!!!!!!!!!!!!!!!!");
 //                    NRF_LOG_FLUSH();  
 //                }else
 //                {
-//                    memcpy(G_SDCDBuffer1+G_SDCDBuffer1_NUM,G_MPU9255_Data,sizeof(G_MPU9255_Data)); 
-//                    G_SDCDBuffer1_NUM += sizeof(G_MPU9255_Data);
+//                    memcpy(G_SDCDBuffer1+G_SDCDBuffer1_NUM,G_IMU_Data,sizeof(G_IMU_Data)); 
+//                    G_SDCDBuffer1_NUM += sizeof(G_IMU_Data);
 //                }               
 //                 
 //                /*  Õ∑≈◊ ‘¥ */
@@ -681,7 +982,7 @@ uint8_t vTask_CreatTask(void)
 //        
 
 //        //test        
-////        if((G_MPU9255_Counter % 255) == 0)
+////        if((G_IMUData_Counter % 255) == 0)
 ////        {
 ////            NRF_LOG_INFO("MPU9255 Data is OK!___5s");
 ////        }        

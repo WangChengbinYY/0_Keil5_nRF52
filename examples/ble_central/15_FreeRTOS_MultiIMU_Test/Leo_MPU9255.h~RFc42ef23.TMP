@@ -244,7 +244,7 @@ uint8_t ucMPU9255_INIT(void);
 //<*		其它							读取失败
 /*--------------------------------------------------------------------------*/
 //uint8_t Leo_MPU9255_Read_ACC(int16_t *pACC_X , int16_t *pACC_Y , int16_t *pACC_Z);
-uint8_t Leo_MPU9255_Read_ACC(uint8_t * Dat);
+uint8_t Leo_MPU9255_Read_ACC(void);
 
 
 //@brief nRF52<--SPI-->MPU9255  nRF52读取MPU9255内 陀螺计数据，并判断符号
@@ -256,7 +256,7 @@ uint8_t Leo_MPU9255_Read_ACC(uint8_t * Dat);
 //<*		其它							读取失败
 /*--------------------------------------------------------------------------*/
 //uint8_t Leo_MPU9255_Read_Gyro(int16_t *pGYRO_X , int16_t *pGYRO_Y , int16_t *pGYRO_Z )
-uint8_t Leo_MPU9255_Read_Gyro(uint8_t * Dat);
+uint8_t Leo_MPU9255_Read_Gyro(void);
 
 
 //@brief nRF52<--SPI-->MPU9255  nRF52读取MPU9255内 陀螺计数据，并判断符号,没有做修正！！！
@@ -268,7 +268,7 @@ uint8_t Leo_MPU9255_Read_Gyro(uint8_t * Dat);
 //<*		其它					读取失败
 /*--------------------------------------------------------------------------*/
 //uint8_t Leo_MPU9255_Read_Magnetic(int16_t *pMAG_X , int16_t *pMAG_Y , int16_t *pMAG_Z)
-uint8_t Leo_MPU9255_Read_Magnetic(uint8_t * Dat);
+uint8_t Leo_MPU9255_Read_Magnetic(void);
     
  
     

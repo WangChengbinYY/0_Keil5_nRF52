@@ -20,11 +20,14 @@
 
 
 
-/**
- * 全局变量_时间参数
-*/
+
 extern uint16_t    G_MicroSecond;
 extern uint32_t    G_GPSWeekSecond;
+extern uint8_t	   G_IMUData_Counter;
+
+extern TaskHandle_t    xTaskHandle_CollectData;         /*5ms触发的采集任务    句柄 */
+
+
 
 
 
@@ -50,9 +53,11 @@ const nrfx_timer_t  xTimerInstance_3 = NRFX_TIMER_INSTANCE(configTIMER3_INSTANCE
 *-----------------------------------------------------------------------*/
 static void vTimerHandler_3(nrf_timer_event_t event_type, void* p_context)
 {
+    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
     //待完善 此处后面添加 5ms 的判断
     if(event_type == NRF_TIMER_EVENT_COMPARE3)
     {
+        //(1)时间 + 1ms
         if(G_MicroSecond < 999)
             G_MicroSecond++;
         else
@@ -60,6 +65,26 @@ static void vTimerHandler_3(nrf_timer_event_t event_type, void* p_context)
             G_MicroSecond = 0;
             G_GPSWeekSecond++;
         }
+        
+        //(2)判断是否为 整5ms
+        if((G_MicroSecond % 5) == 0)
+        {
+            G_IMUData_Counter++;
+            //将时间信息和采样计数值 赋值到 数据结构体中 此处先不实现，看看实际处理情况
+            //是否有超过1ms的延迟，如果数据的ms时间都是按照5来递增的，就不考虑
+            
+            //通知 数据采集 和 测距 未完成
+            xTaskNotifyFromISR(xTaskHandle_CollectData,    
+                                0,           
+                                eNoAction,
+                                &xHigherPriorityTaskWoken);            
+            portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+            
+            
+
+            
+        }            
+
     }
 }
 

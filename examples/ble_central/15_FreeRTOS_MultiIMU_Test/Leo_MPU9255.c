@@ -22,7 +22,8 @@
 
 
 extern nrf_drv_spi_t    SPI_CollectData;  			//IMU数据采集使用的SPI实例		
-//extern uint8_t          G_MPU9255_SPI_xfer_Done;
+extern uint8_t	    G_CollectData[512];                 //SDCard要储存数据的缓存
+extern uint16_t	    G_CollectData_Counter;    
 
 
 
@@ -42,8 +43,7 @@ extern nrf_drv_spi_t    SPI_CollectData;  			//IMU数据采集使用的SPI实例
 //@brief 全局变量定义
 /*--------------------------------------------------------------------------*/
 				
-extern uint8_t		G_MPU9255_MAG_ASAXYZ[7];
-extern uint8_t		G_MPU9255_MAG_ASAXYZ_IsValid;
+
 
 extern uint8_t		G_MPU9255_Data[32];
 //extern uint8_t		G_MPU9255_Data_IsValid;
@@ -289,12 +289,17 @@ uint8_t ucMPU9255_INIT(void)
 	nrf_delay_ms(10);	
 		
 	//读取磁强计数值修正参数
-	error_code |= Leo_MPU9255_AK8963_SPI_ReadBytes(MPU9255_AK8963_ASAX,&G_MPU9255_MAG_ASAXYZ[2],3);    
+    uint8_t tMPU9255_MAG_coeff[6] = {0};    
+	error_code |= Leo_MPU9255_AK8963_SPI_ReadBytes(MPU9255_AK8963_ASAX,&tMPU9255_MAG_coeff[2],3);    
 	nrf_delay_ms(3);	
     if(error_code == 0)
     {
-        G_MPU9255_MAG_ASAXYZ_IsValid = 1;
-        NRF_LOG_INFO("		AK8963 Config is ：0x%x %x %x",G_MPU9255_MAG_ASAXYZ[2],G_MPU9255_MAG_ASAXYZ[3],G_MPU9255_MAG_ASAXYZ[4]);
+        tMPU9255_MAG_coeff[0] = 0xC1;
+        tMPU9255_MAG_coeff[1] = 0xC2;
+        tMPU9255_MAG_coeff[5] = 0xFF;   
+        memcpy(G_CollectData+G_CollectData_Counter,tMPU9255_MAG_coeff,6);
+        G_CollectData_Counter = G_CollectData_Counter + 6;
+        NRF_LOG_INFO("		AK8963 Config is ：0x%x %x %x",tMPU9255_MAG_coeff[2],tMPU9255_MAG_coeff[3],tMPU9255_MAG_coeff[4]);
     }
         
 	//试验 输出读出的 
@@ -356,10 +361,10 @@ uint8_t ucMPU9255_INIT(void)
 //<*		NRF_SUCCESS		读取成功 (0)
 //<*		其它							读取失败
 /*--------------------------------------------------------------------------*/
-uint8_t Leo_MPU9255_Read_ACC(void)
+uint8_t Leo_MPU9255_Read_ACC(uint8_t * Data)
 {
 	uint8_t		error_code = 0;
-	error_code = Leo_MPU9255_SPI_ReadBytes(MPU9255_ACCEL_XOUT_H, &G_MPU9255_Data[9], 6);	
+	error_code = Leo_MPU9255_SPI_ReadBytes(MPU9255_ACCEL_XOUT_H, Data+9, 6);	
 	return error_code;
 	
 	//	uint8_t buf[6] = {0};    		    
@@ -384,10 +389,10 @@ uint8_t Leo_MPU9255_Read_ACC(void)
 //<*		其它							读取失败
 /*--------------------------------------------------------------------------*/
 //uint8_t Leo_MPU9255_Read_Gyro(int16_t *pGYRO_X , int16_t *pGYRO_Y , int16_t *pGYRO_Z )
-uint8_t Leo_MPU9255_Read_Gyro(void)
+uint8_t Leo_MPU9255_Read_Gyro(uint8_t * Data)
 {
 	uint8_t		error_code = 0;
-	error_code = Leo_MPU9255_SPI_ReadBytes(MPU9255_GYRO_XOUT_H, &G_MPU9255_Data[15], 6);
+	error_code = Leo_MPU9255_SPI_ReadBytes(MPU9255_GYRO_XOUT_H, Data+15, 6);
 	return error_code;
 //  uint8_t buf[6] = {0};    			
 //  error_code |= Leo_MPU9255_SPI_ReadBytes(MPU9255_GYRO_XOUT_H,  buf, 6);	
@@ -410,17 +415,17 @@ uint8_t Leo_MPU9255_Read_Gyro(void)
 //<*		其它					读取失败
 /*--------------------------------------------------------------------------*/
 //uint8_t Leo_MPU9255_Read_Magnetic(int16_t *pMAG_X , int16_t *pMAG_Y , int16_t *pMAG_Z)
-uint8_t Leo_MPU9255_Read_Magnetic(void)
+uint8_t Leo_MPU9255_Read_Magnetic(uint8_t * Data)
 {
 	uint8_t	error_code = 0;
 	uint8_t buf[8] = {0}; 
 	error_code = Leo_MPU9255_SPI_ReadBytes(MPU9255_EXT_SENS_DATA_00,buf,8);
-	G_MPU9255_Data[21] = buf[2];
-	G_MPU9255_Data[22] = buf[1];
-	G_MPU9255_Data[23] = buf[4];
-	G_MPU9255_Data[24] = buf[3];
-	G_MPU9255_Data[25] = buf[6];
-	G_MPU9255_Data[26] = buf[5];	
+	*(Data+21) = buf[2];
+	*(Data+22) = buf[1];
+	*(Data+23) = buf[4];
+	*(Data+24) = buf[3];
+	*(Data+25) = buf[6];
+	*(Data+26) = buf[5];	
 	return error_code;	
 	
 	//进行数据整合和符号判断
