@@ -201,21 +201,18 @@ uint8_t ucSDCard_SaveData(uint8_t* mbuffer,UINT mLength)
 uint8_t ucSDCard_CloseFile(void)
 {
 	FRESULT ff_result;
-    if(G_SDCard_FileIsOpen == 1)
+
+    ff_result = f_close(&file);   
+    if(ff_result != FR_OK)
     {
-        ff_result = f_close(&file);   
-        if(ff_result != FR_OK)
-        {
-            NRF_LOG_INFO("  IMUFile close Wrong!");
-            return 1;
-        }else
-        {
-            NRF_LOG_INFO("  IMUFile close Right!");
-            G_SDCard_FileIsOpen = 0;
-        }
+        NRF_LOG_INFO("  IMUFile close Wrong!");
+        return 1;
     }else
-        return 0;   
-    
+    {
+        NRF_LOG_INFO("  IMUFile close Right!");
+        G_SDCard_FileIsOpen = 0;
+    }
+     
 	return ff_result;	
 }
 

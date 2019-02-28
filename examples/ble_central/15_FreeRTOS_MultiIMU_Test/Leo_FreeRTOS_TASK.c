@@ -289,17 +289,17 @@ static uint8_t ucINIT_Peripheral()
     nrf_drv_spi_uninit(&SPI_CollectData);	
   
     /* (2) 初始化第二个MPU9255_B  */  
-    SPI_config.ss_pin			= configGPIO_SPI_MPU2_CS;               //第二个IMU的nCS管脚
-	//依据配置参数 对 实例spi 进行初始化 
-    err_code |= nrf_drv_spi_init(&SPI_CollectData, &SPI_config, NULL,NULL);	
-    NRF_LOG_INFO(("||Initialize||-->SPI_IMU_2------>error  0x%x"),err_code); 
-    NRF_LOG_FLUSH();      
-    //针对IMU_1初始化
-    err_code |= ucMPU9255_INIT();
-    NRF_LOG_INFO(("||Initialize||-->MPU9255_B-------->error  0x%x"),err_code);
-    NRF_LOG_FLUSH();   
-    //卸载SPI
-    nrf_drv_spi_uninit(&SPI_CollectData);	       
+//    SPI_config.ss_pin			= configGPIO_SPI_MPU2_CS;               //第二个IMU的nCS管脚
+//	//依据配置参数 对 实例spi 进行初始化 
+//    err_code |= nrf_drv_spi_init(&SPI_CollectData, &SPI_config, NULL,NULL);	
+//    NRF_LOG_INFO(("||Initialize||-->SPI_IMU_2------>error  0x%x"),err_code); 
+//    NRF_LOG_FLUSH();      
+//    //针对IMU_1初始化
+//    err_code |= ucMPU9255_INIT();
+//    NRF_LOG_INFO(("||Initialize||-->MPU9255_B-------->error  0x%x"),err_code);
+//    NRF_LOG_FLUSH();   
+//    //卸载SPI
+//    nrf_drv_spi_uninit(&SPI_CollectData);	       
 
 /**
  * 5. 配置正确的SPI，等待片选管脚设置 
