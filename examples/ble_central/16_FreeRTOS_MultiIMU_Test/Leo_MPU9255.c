@@ -277,6 +277,7 @@ uint8_t ucMPU9255_INIT(void)
 	nrf_delay_ms(10);	
 	
 	//reset AK8963 软件复位重启
+    //  很奇怪，这里用片选管脚控制时，总会失败，不清楚为什么，初始化只能用 SPI的初始化和uint 
 	error_code |= Leo_MPU9255_AK8963_SPI_WriteOneByte(MPU9255_AK8963_RSV,MPU9255_AK8963_RSV_SRST);
 	nrf_delay_ms(3);
 	

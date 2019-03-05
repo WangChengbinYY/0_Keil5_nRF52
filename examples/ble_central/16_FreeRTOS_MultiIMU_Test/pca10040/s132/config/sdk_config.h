@@ -5775,7 +5775,7 @@
 // <2=> 2 
 
 #ifndef APP_SDCARD_SPI_INSTANCE
-#define APP_SDCARD_SPI_INSTANCE 0
+#define APP_SDCARD_SPI_INSTANCE 1
 #endif
 
 // <o> APP_SDCARD_FREQ_INIT  - SPI frequency

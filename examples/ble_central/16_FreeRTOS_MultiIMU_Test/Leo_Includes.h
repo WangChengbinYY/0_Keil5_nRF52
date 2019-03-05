@@ -103,14 +103,8 @@
 
 
 
-
-
-
-
-
 /*------------------------- 寄存器相关 -------------------------*/
 #define configRegister_MPU_SPIReadBit 		        0x80		        //SPI读取数据时，对地址添加 (目前在MPU9255中使用)
-
 
 
 /*------------------------- 常值定义 -------------------------*/
@@ -118,16 +112,15 @@
 
 
 
-
 /*=================================== 宏定义_管脚配置GPIO ===============================================*/
 /**
  * GPIO管脚 选型
 */
-#define configGPIO_Set_QFBoard                      1                  //青风开发板
+#define configGPIO_Set_QFBoard                      0                  //青风开发板
 #define configGPIO_Set_DWM1001Dev                   0                  //DWB1001 Dev 开发板
 
 #define configGPIO_Set_nRF52                        0                  //自己第一版研制的 使用的 UWB1000
-#define configGPIO_Set_UWB1001                      0                  //自己第二版研制的 使用的 UWB1001(包含蓝牙)
+#define configGPIO_Set_UWB1001                      1                  //自己第二版研制的 使用的 UWB1001(包含蓝牙)
 
 #if ((configGPIO_Set_QFBoard + configGPIO_Set_nRF52 + configGPIO_Set_UWB1001 + configGPIO_Set_DWM1001Dev) != 1)
     #error "The configGPIO_Set is Wrong!"
@@ -242,6 +235,37 @@
 */
 #if configGPIO_Set_UWB1001
 
+/* INT___外部中断引脚设定 */
+#define configGPIO_INT_SDCard                       2                   /*Button_SDCard 用于触发SDCard 停止存储 按钮,以及 FreeRTOS 任务分析 中断输出  */
+//#define configGPIO_INT_MPU9255                    26                  /*MPU9255 数据采集中断     */
+#define configGPIO_INT_GPSPPS                       26                  /*GPS 1PPS中断     */
+
+/* LED___设备LED显示管脚设定 */
+#define configGPIO_LED_R                            23                  /* 红色LED灯  */
+
+/* SPI_1    SDCard  */
+/*      0 给UWB1001使用，这里用 1 */
+/*      如果要修改SDCard使用的实例，需要修改"sdk_config"里面的APP_SDCARD_SPI_INSTANCE*/
+#define configGPIO_SPI_SDCard_INSTANCE		        1                                                                         
+#define configGPIO_SPI_SDCard_CS					12				    //连接SDCard的——> SD_CS
+#define configGPIO_SPI_SDCard_SCK				    22				    //连接SDCard的——> 5管脚
+#define configGPIO_SPI_SDCard_MOSI				    14				    //连接SDCard的——> DIN
+#define configGPIO_SPI_SDCard_MISO 				    27				    //连接SDCard的——> DC
+
+/* SPI_1    IMU  ---------------------------------*/
+#define configGPIO_SPI_CollectData_INSTANCE         2                   //使用 SPI 的实例2
+#define configGPIO_SPI_CollectData_SCK				8				    //连接MPU9255的——>SCL
+#define configGPIO_SPI_CollectData_MOSI				7				    //连接MPU9255的——>SDA
+#define configGPIO_SPI_CollectData_MISO 			6				    //连接MPU9255的——>ADO  
+
+#define configGPIO_SPI_MPU1_CS				        15				    //连接第一个MPU9255的——>NCS
+#define configGPIO_SPI_MPU2_CS 				        13				    //连接第二个MPU9255的——>ADO 
+
+/* Uart  串口 ----------------------------------------*/
+#define configGPIO_UART_GPS_RXD                      11              //接GPS的TXD
+#define configGPIO_UART_GPS_TXD                      5              //接GPS的RXD
+//#define configGPIO_UART_GPS_CTS                      5               //接GPS的CTS
+//#define configGPIO_UART_GPS_RTS                      7               //接GPS的RTS
 
 
 
