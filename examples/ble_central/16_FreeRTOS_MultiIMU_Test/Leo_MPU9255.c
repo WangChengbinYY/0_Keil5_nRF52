@@ -144,7 +144,7 @@ static uint8_t Leo_MPU9255_AK8963_SPI_WriteOneByte(uint8_t mRegisterAddress, uin
 	nrf_delay_ms(1);
 	
 	do{
-		if(timeout++ > 50)
+		if(timeout++ > 200)
 			return 1;
 		error_code |= Leo_MPU9255_SPI_ReadBytes(MPU9255_I2C_MST_STATUS,&status,1);
 		nrf_delay_ms(1);		
@@ -223,7 +223,7 @@ uint8_t ucMPU9255_INIT(void)
 	//=====================================设置MPU9255============================================
 	//器件重置
 	error_code |= Leo_MPU9255_SPI_WriteOneByte(MPU9255_PWR_MGMT_1,MPU9255_PWR_MGMT_1_RESET);//reset
-	nrf_delay_ms(3);
+	nrf_delay_ms(50);
 		
 	//重置器件的 数字信号路径
 	error_code |= Leo_MPU9255_SPI_WriteOneByte(MPU9255_SIGNAL_PATH_RESET,MPU9255_SIGNAL_PATH_RESET_GYRO|MPU9255_SIGNAL_PATH_RESET_ACCEL|MPU9255_SIGNAL_PATH_RESET_TEMP); 
@@ -270,20 +270,21 @@ uint8_t ucMPU9255_INIT(void)
 	
 	//=====================================设置AK8963============================================			
 	//设置位主I2C模式，便于开始对AK8963进行设置
-	error_code |= Leo_MPU9255_SPI_WriteOneByte(MPU9255_USER_CTRL,MPU9255_USER_CTRL_I2C_MST_EN); 
-	nrf_delay_ms(3);
+//	error_code |= Leo_MPU9255_SPI_WriteOneByte(MPU9255_USER_CTRL,MPU9255_USER_CTRL_I2C_MST_EN); 
+	error_code |= Leo_MPU9255_SPI_WriteOneByte(MPU9255_USER_CTRL,0x30); 
+	nrf_delay_ms(50);
 	//设置 MPU9255 I2C通信：中断等待；there is a stop between reads；时钟速率 400kHz(这个主机和从机需要一致),
 	error_code |= Leo_MPU9255_SPI_WriteOneByte(MPU9255_I2C_MST_CTRL,MPU9255_I2C_MST_CTRL_MULT_MST_EN|MPU9255_I2C_MST_CTRL_WAIT_FOR_ES|MPU9255_I2C_MST_CTRL_I2C_MST_P_NSR|MPU9255_I2C_MST_CTRL_I2C_MST_CLK); 
-	nrf_delay_ms(10);	
+	nrf_delay_ms(20);	
 	
 	//reset AK8963 软件复位重启
     //  很奇怪，这里用片选管脚控制时，总会失败，不清楚为什么，初始化只能用 SPI的初始化和uint 
 	error_code |= Leo_MPU9255_AK8963_SPI_WriteOneByte(MPU9255_AK8963_RSV,MPU9255_AK8963_RSV_SRST);
-	nrf_delay_ms(3);
+	nrf_delay_ms(10);
 	
 	//POWER_DOWN 模式关闭 ，输出模式为16位
 	error_code |= Leo_MPU9255_AK8963_SPI_WriteOneByte(MPU9255_AK8963_CNTL1,MPU9255_AK8963_CNTL1_POWER_DOWN|MPU9255_AK8963_CNTL1_BIT);
-	nrf_delay_ms(3);
+	nrf_delay_ms(10);
 
 	//保险丝ROM访问模式 ，输出模式为16位，便于首先读出 磁强计数值修正参数
 	error_code |= Leo_MPU9255_AK8963_SPI_WriteOneByte(MPU9255_AK8963_CNTL1,MPU9255_AK8963_CNTL1_FUSE_ROM|MPU9255_AK8963_CNTL1_BIT);

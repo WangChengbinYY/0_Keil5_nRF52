@@ -74,11 +74,11 @@ static void vTimerHandler_3(nrf_timer_event_t event_type, void* p_context)
             //是否有超过1ms的延迟，如果数据的ms时间都是按照5来递增的，就不考虑
             
             //通知 数据采集 和 测距 未完成
-            xTaskNotifyFromISR(xTaskHandle_CollectData,    
-                                0,           
-                                eNoAction,
-                                &xHigherPriorityTaskWoken);            
-            portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+//            xTaskNotifyFromISR(xTaskHandle_CollectData,    
+//                                0,           
+//                                eNoAction,
+//                                &xHigherPriorityTaskWoken);            
+//            portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
             
             
 

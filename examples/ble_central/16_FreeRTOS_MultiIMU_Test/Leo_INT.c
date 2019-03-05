@@ -67,15 +67,15 @@ static void vINTHandler_SDCard(nrfx_gpiote_pin_t pin, nrf_gpiote_polarity_t acti
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
     if(nrf_gpio_pin_read(configGPIO_INT_SDCard) == 0)
     {
-        if(G_SDCard_FileIsOpen == 1)
-        {
-            //通知 关闭文件操作任务
-            xTaskNotifyFromISR(xTaskHandle_SDCard_Close,    
-                                0,           
-                                eNoAction,
-                                &xHigherPriorityTaskWoken);            
-            portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
-        }
+//        if(G_SDCard_FileIsOpen == 1)
+//        {
+//            //通知 关闭文件操作任务
+//            xTaskNotifyFromISR(xTaskHandle_SDCard_Close,    
+//                                0,           
+//                                eNoAction,
+//                                &xHigherPriorityTaskWoken);            
+//            portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+//        }
         
         nrfx_gpiote_out_toggle(configGPIO_LED_R);
         //任务分析

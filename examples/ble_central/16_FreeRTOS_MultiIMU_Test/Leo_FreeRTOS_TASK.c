@@ -263,12 +263,17 @@ static uint8_t ucINIT_Peripheral()
     NRF_LOG_FLUSH();   
 
 
+
 /**
  * 4. 初始化 IMU 
        MPU9250初始化，利用SPI对I2C进行控制时，利用片选管脚总是失败！！，只能重复 SPI init和uint了！！！
  */
     
-    /* (1) 初始化IMU_A的SPI配置 并初始化IMU_A  */   
+    /* (1) 初始化IMU_A的SPI配置 并初始化IMU_B  */
+    //关闭 IMU_B 的 nCS管脚
+    err_code |= nrfx_gpiote_out_init(configGPIO_SPI_MPU2_CS,&tconfigGPIO_OUT);
+    nrfx_gpiote_out_set(configGPIO_SPI_MPU2_CS);  //输出1     
+    nrf_delay_us(10);
     nrf_drv_spi_config_t SPI_config = NRF_DRV_SPI_DEFAULT_CONFIG;
 	SPI_config.sck_pin 			= configGPIO_SPI_CollectData_SCK;
 	SPI_config.mosi_pin 		= configGPIO_SPI_CollectData_MOSI;
@@ -277,51 +282,55 @@ static uint8_t ucINIT_Peripheral()
 	SPI_config.irq_priority	    = SPI_DEFAULT_CONFIG_IRQ_PRIORITY;		//系统SPI中断权限默认设定为 7 
 	SPI_config.orc				= 0xFF;
 	SPI_config.frequency		= NRF_DRV_SPI_FREQ_500K;				//MPU9255 SPI使用的范围为 100KHz~1MHz
-    //SPI_config.frequency		= NRF_DRV_SPI_FREQ_1M;
 	SPI_config.mode             = NRF_DRV_SPI_MODE_0;                     
     SPI_config.bit_order        = NRF_DRV_SPI_BIT_ORDER_MSB_FIRST;	
 	//依据配置参数 对 实例spi 进行初始化 
 	err_code |= nrf_drv_spi_init(&SPI_CollectData, &SPI_config, NULL,NULL);	
+    nrf_delay_ms(3);
     //初始化 IMU_A
     err_code |= ucMPU9255_INIT();    
     NRF_LOG_INFO(("||Initialize||-->IMU_A----------->error  0x%x"),err_code);
     NRF_LOG_FLUSH();
+    //卸载SPI
+    nrf_drv_spi_uninit(&SPI_CollectData);
+    nrf_delay_ms(3);
+    //关闭 IMU_A nCS 管脚
+    err_code |= nrfx_gpiote_out_init(configGPIO_SPI_MPU1_CS,&tconfigGPIO_OUT);
+    nrfx_gpiote_out_set(configGPIO_SPI_MPU1_CS);  //输出1       
+        
     
-    /* (2) 初始化第二个IMU_B  */  
-    //先卸载当前SPI
-    nrf_drv_spi_uninit(&SPI_CollectData);	
+    /* (2) 初始化第二个IMU_B  */  	
     SPI_config.ss_pin			= configGPIO_SPI_MPU2_CS;               //第二个IMU的nCS管脚
+    //IMU_B nCS 管脚恢复
+    nrfx_gpiote_out_uninit(configGPIO_SPI_MPU2_CS);
 	//依据配置参数 对 实例spi 进行初始化 
     err_code |= nrf_drv_spi_init(&SPI_CollectData, &SPI_config, NULL,NULL);	
+    nrf_delay_ms(3);
     err_code |= ucMPU9255_INIT();    
     NRF_LOG_INFO(("||Initialize||-->IMU_B----------->error  0x%x"),err_code);
     NRF_LOG_FLUSH();
-
-    /* (3) 配置正确的IMU SPI  */ 
-    //先卸载当前SPI
+    //卸载SPI
     nrf_drv_spi_uninit(&SPI_CollectData);
+    nrf_delay_ms(3);
+    //关闭 IMU_B nCS 管脚    
+    err_code |= nrfx_gpiote_out_init(configGPIO_SPI_MPU2_CS,&tconfigGPIO_OUT);
+    nrfx_gpiote_out_set(configGPIO_SPI_MPU2_CS);  //输出1      
+    
+    /* (3) 配置正确的IMU SPI  */  
     //配置SPI 其中nCS不设定，初始化
     SPI_config.ss_pin			= NRF_DRV_SPI_PIN_NOT_USED;         //不使用nCS管脚
     SPI_config.frequency		= NRF_DRV_SPI_FREQ_1M;    
-    err_code |= nrf_drv_spi_init(&SPI_CollectData, &SPI_config, NULL,NULL);	
-   //第一个SPI 片选
-    nrfx_gpiote_out_uninit(configGPIO_SPI_MPU1_CS);
-    err_code |= nrfx_gpiote_out_init(configGPIO_SPI_MPU1_CS,&tconfigGPIO_OUT);
-    nrfx_gpiote_out_set(configGPIO_SPI_MPU1_CS);  //输出1     
-   //第二个SPI 片选
-    nrfx_gpiote_out_uninit(configGPIO_SPI_MPU2_CS);
-    err_code |= nrfx_gpiote_out_init(configGPIO_SPI_MPU2_CS,&tconfigGPIO_OUT);
-    nrfx_gpiote_out_set(configGPIO_SPI_MPU2_CS);  //输出1       
+    err_code |= nrf_drv_spi_init(&SPI_CollectData, &SPI_config, NULL,NULL);	   
     NRF_LOG_INFO(("||Initialize||-->SPI_CollectData->error  0x%x"),err_code); 
     NRF_LOG_FLUSH(); 
     
     
-    while(1)
-    {
-        nrf_delay_ms(500);
-        nrfx_gpiote_out_toggle(configGPIO_LED_R);
-        
-    }
+//    while(1)
+//    {
+//        nrf_delay_ms(500);
+//        nrfx_gpiote_out_toggle(configGPIO_LED_R);
+//        
+//    }
   
     
     return err_code;
