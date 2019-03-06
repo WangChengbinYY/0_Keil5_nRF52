@@ -156,8 +156,8 @@
 #define configGPIO_SPI_CollectData_MOSI				15				    //连接MPU9255的——>SDA
 #define configGPIO_SPI_CollectData_MISO 			16				    //连接MPU9255的——>ADO  
 
-#define configGPIO_SPI_MPU1_CS				        13				    //连接第一个MPU9255的——>NCS
-#define configGPIO_SPI_MPU2_CS 				        18				    //连接第二个MPU9255的——>ADO 
+#define configGPIO_SPI_IMUA_nCS				        13				    //连接第一个MPU9255的——>NCS
+#define configGPIO_SPI_IMUB_nCS 				        18				    //连接第二个MPU9255的——>ADO 
 
 /* Uart  串口 ----------------------------------------*/
 #define configGPIO_UART_GPS_RXD                      22              //接GPS的TXD
@@ -258,14 +258,14 @@
 #define configGPIO_SPI_CollectData_MOSI				7				    //连接MPU9255的——>SDA
 #define configGPIO_SPI_CollectData_MISO 			6				    //连接MPU9255的——>ADO  
 
-#define configGPIO_SPI_MPU1_CS				        15				    //连接第一个MPU9255的——>NCS
-#define configGPIO_SPI_MPU2_CS 				        13				    //连接第二个MPU9255的——>ADO 
+#define configGPIO_SPI_IMUA_nCS				        15				    //IMU_A(U4) 的片选
+#define configGPIO_SPI_IMUB_nCS 				    13				    //IMU_B(U5) 的片选
 
 /* Uart  串口 ----------------------------------------*/
-#define configGPIO_UART_GPS_RXD                      11              //接GPS的TXD
-#define configGPIO_UART_GPS_TXD                      5              //接GPS的RXD
-//#define configGPIO_UART_GPS_CTS                      5               //接GPS的CTS
-//#define configGPIO_UART_GPS_RTS                      7               //接GPS的RTS
+#define configGPIO_UART_GPS_RXD                      11                 //接GPS的TXD
+#define configGPIO_UART_GPS_TXD                      5                  //接GPS的RXD
+//#define configGPIO_UART_GPS_CTS                    5                //接GPS的CTS
+//#define configGPIO_UART_GPS_RTS                    7                //接GPS的RTS
 
 
 

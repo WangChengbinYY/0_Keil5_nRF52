@@ -66,8 +66,8 @@ static FILINFO fno;
 /*--------------------------------------------------------------------------*/
 uint8_t ucSDCard_INIT(void)
 {
-
-
+    char mNameNRF52File[13];
+    uint8_t mNumberFile = 0;
 	FRESULT ff_result;
     DSTATUS disk_state = STA_NOINIT;
 
@@ -102,34 +102,8 @@ uint8_t ucSDCard_INIT(void)
     {
         //NRF_LOG_INFO("Mount is OK!");
     }        
-	return  ff_result;				
-}
-
-/*------------------------------------------------------------
- *建立SDCard存储文件                                          
- *  成功返回:0; 失败返回:1;                                    
- *------------------------------------------------------------*/
-uint8_t ucSDCard_OpenFile(void)
-{    
-    uint8_t mNumberFile = 0;
-    FRESULT ff_result;
-    char mNameNRF52File[13];
-    //判断文件是否已经打开
-    if(G_SDCard_FileIsOpen == 1)
-    {
-        //已打开，先关闭，再重新建立
-        ff_result = ucSDCard_CloseFile();
-        if(ff_result != FR_OK)
-        {
-            NRF_LOG_INFO("  IMUFile has been opened! Closen is Wrong!");
-            return 1;
-        }else
-        {
-            G_SDCard_FileIsOpen = 0;
-        }
-        
-    }
     
+        
     do
     {   
         mNumberFile++;
@@ -163,10 +137,74 @@ uint8_t ucSDCard_OpenFile(void)
     }else
 	{
 		NRF_LOG_INFO("  IMUFile Open is OK!%s",mNameNRF52File);
-        G_SDCard_FileIsOpen = 1;
 	}
-    return  ff_result;        
+   
+	return  ff_result;				
 }
+
+/*------------------------------------------------------------
+ *建立SDCard存储文件                                          
+ *  成功返回:0; 失败返回:1;                                    
+ *------------------------------------------------------------*/
+
+//uint8_t ucSDCard_OpenFile(void)
+//{    
+//    uint8_t mNumberFile = 0;
+//    FRESULT ff_result;
+//    char mNameNRF52File[13];
+//    //判断文件是否已经打开
+//    if(G_SDCard_FileIsOpen == 1)
+//    {
+//        //已打开，先关闭，再重新建立
+//        ff_result = ucSDCard_CloseFile();
+//        if(ff_result != FR_OK)
+//        {
+//            NRF_LOG_INFO("  IMUFile has been opened! Closen is Wrong!");
+//            return 1;
+//        }else
+//        {
+//            G_SDCard_FileIsOpen = 0;
+//        }
+//        
+//    }
+//    
+//    do
+//    {   
+//        mNumberFile++;
+//        if(mNumberFile > 99)
+//            return 1;
+//        
+//        sprintf(mNameNRF52File,"IMUGPS%d.dat",mNumberFile);
+
+//        ff_result = f_stat(mNameNRF52File,&fno);
+//        if(ff_result == FR_NO_FILE)
+//        {
+//            //NRF_LOG_INFO("  %s File is not existed!",mNameNRF52File);
+//            break;
+//        }else{
+//            if(ff_result == FR_OK)
+//            {
+//                //NRF_LOG_INFO("  %s File is existed!",mNameNRF52File);
+//            }else
+//            {
+//                NRF_LOG_INFO(" An error occured.!!!!!!");
+//                return 1;
+//            }
+//        }   
+//    }while(1);
+//        
+//    ff_result = f_open(&file, mNameNRF52File, FA_READ | FA_WRITE | FA_CREATE_ALWAYS);
+//	if (ff_result != FR_OK)
+//    {
+//       NRF_LOG_INFO("Unable to open or create file!%s",mNameNRF52File);
+//       return ff_result;
+//    }else
+//	{
+//		NRF_LOG_INFO("  IMUFile Open is OK!%s",mNameNRF52File);
+//        G_SDCard_FileIsOpen = 1;
+//	}
+//    return  ff_result;        
+//}
 
 
 
@@ -210,10 +248,8 @@ uint8_t ucSDCard_CloseFile(void)
     }else
     {
         NRF_LOG_INFO("  IMUFile close Right!");
-        G_SDCard_FileIsOpen = 0;
-    }
-     
-	return ff_result;	
+    }     
+	return 0;	
 }
 
 

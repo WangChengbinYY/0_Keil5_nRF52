@@ -23,28 +23,33 @@
 
 
 /*========================== 全局变量定义！================================*/
-/* 全局变量_时间参数 */
-uint32_t    G_GPSWeekSecond;                   //GPS周内秒数据
-uint16_t    G_MicroSecond;                     //nRF52时间计数器控制的 1s的1000计数值，由外部GPS的1PPS校准 1PPS触发时 将其置0
-
-/* 全局变量_SDCard文件操作标识 */                                                        
-uint8_t     G_SDCard_FileIsOpen;               //标记是否已经打开文件 没打开，默认为0
-
-/* 全局变量_IMU数据采集的 SPI2 实例（UWB 用SPI0；SDCard 用SPI1； IMU 和 压力传感器 用SPI2） */
+//全局变量_IMU数据采集的 SPI2 实例（UWB 用SPI0；SDCard 用SPI1； IMU 和 压力传感器 用SPI2） 
 nrf_drv_spi_t   SPI_CollectData = NRF_DRV_SPI_INSTANCE(configGPIO_SPI_CollectData_INSTANCE);	
 
+//全局变量_时间参数 
+uint32_t    G_GPSWeekSecond;                   //GPS周内秒数据
+uint16_t    G_MicroSecond;                     //nRF52时间计数器控制的 1s的1000计数值，由外部GPS的1PPS校准 1PPS触发时 将其置0
+uint8_t	    G_GPSWeekSecond_Data[7];          //用于数据采集时，记录的当时时刻的时间
+
+//全局变量_IMU_A(U4)和IMU_B(U5)磁强计修正参数
+uint8_t	    G_MAG_Coeffi[6]; 
+
+//全局变量_IMU_A(U4)和IMU_B(U5)存放的缓存                
+uint8_t	    G_IMU_Data_A[24];                   //第一组IMU_A(U4)存放的数据
+uint8_t	    G_IMU_Data_B[24];                   //第二组IMU_A(U5)存放的数据
+uint8_t	    G_IMUDataA_Counter;                  //MPU9255中断触发的计数器	    
+uint8_t	    G_IMUDataB_Counter;
+
+
+
+
+
+
+// 全局变量_SDCard存储缓存                                                         
 uint8_t	    G_CollectData[512];                 //SDCard要储存数据的缓存
-uint16_t	    G_CollectData_Counter;                 
-
-uint8_t	    G_IMU_Data1[28];                    //第一组MPU9255存放的数据
-uint8_t	    G_IMU_Data2[28];                    //第二组MPU9255存放的数据
-uint8_t	    G_IMUData_Counter;                  //MPU9255中断触发的计数器	    
-
-
-
-
-
-
+uint16_t    G_CollectData_Counter;  
+// 全局变量_SDCard文件操作标识                                                         
+uint8_t     G_SDCard_FileIsOpen;               //标记是否已经打开文件 没打开，默认为0
 
 
 //uint8_t     G_GPS_Data[33];                     //GPS接收数据
@@ -78,13 +83,10 @@ uint8_t	    G_IMUData_Counter;                  //MPU9255中断触发的计数器
 /*=========================================== 任务优先级设定 ============================================*/
 /* 0级 */
 #define taskPRIO_INIT                        0          /* 系统初始化：仅在开始执行一次，初始化失败则进入死循环LED不听闪烁*/
-#define taskPRIO_LED_SLOW                    0          /* LED慢闪(1s一闪)：(代表GPS初始定位成功，并获取时间)   */
-#define taskPRIO_LED_QUICK                   0          /* LED快闪(500ms)：(代表SDCard的存储或停止操作成功)   */
+#define taskPRIO_SDCard_Close                0          //SDCard关闭文件成功  标志位置0  数据不会存储
 
 /* 1级 */
 #define taskPRIO_GPS_RxData                  1          //接收GPS数据并解析，解析成功，通知存储 
-#define taskPRIO_SDCard_Open                 1          //SDCard建立文件成功  标志位置1  数据会被存储
-#define taskPRIO_SDCard_Close                1          //SDCard关闭文件成功  标志位置0  数据不会存储
 
 /* 2级 */
 #define taskPRIO_SDCard_Save                 2          //SDCard存储数据
@@ -101,10 +103,10 @@ uint8_t	    G_IMUData_Counter;                  //MPU9255中断触发的计数器
  * 全局变量_任务函数句柄
 */
 TaskHandle_t    xTaskHandle_TaskINIT            = NULL;         /*系统初始化任务       句柄 */
-TaskHandle_t    xTaskHandle_CollectData         = NULL;         /*5ms触发的采集任务    句柄 */
 TaskHandle_t    xTaskHandle_SDCard_Save         = NULL;         /*SDCard存储任务       句柄 */
-TaskHandle_t    xTaskHandle_SDCard_Open         = NULL;         /*SDCard 新建文件任务  句柄 */
 TaskHandle_t    xTaskHandle_SDCard_Close        = NULL;         /*SDCard 关闭文件任务  句柄 */
+TaskHandle_t    xTaskHandle_CollectData         = NULL;         /*5ms触发的采集任务    句柄 */
+
 
 
 /**
@@ -162,25 +164,37 @@ SemaphoreHandle_t   xMutex_SDCDBuffer           = NULL;
 */
 static void vINIT_Variable(void)
 {
+    //全局变量_时间参数 
     G_GPSWeekSecond     = 0;                    //GPS周内秒数据
     G_MicroSecond       = 0;                    //nRF52时间计数器控制的 1s的1000计数值，
-                                                        //由 外部GPS的1PPS校准 1PPS触发时 将其置0
-    G_SDCard_FileIsOpen = 0;                    //标记是否已经打开文件 没打开，默认为0
+    //数据采集的整秒记录
+    memset(G_GPSWeekSecond_Data,0,7);
+    G_GPSWeekSecond_Data[0] = 0xA0;
+	G_GPSWeekSecond_Data[1] = 0xA0;
+    G_GPSWeekSecond_Data[6] = 0xFF;   
     
+    //全局变量_IMU_A(U4)和IMU_B(U5)磁强计修正参数
+    memset(G_MAG_Coeffi,0,6);
+    G_MAG_Coeffi[5] = 0xFF;     
+    
+    //全局变量_IMU_A(U4)数据
+    memset(G_IMU_Data_A,0,24);
+    G_IMU_Data_A[0] = 0xB1;
+	G_IMU_Data_A[1] = 0xB1;
+    G_IMU_Data_A[23] = 0xFF;
+    memset(G_IMU_Data_B,0,24);
+    G_IMU_Data_B[0] = 0xB2;
+	G_IMU_Data_B[1] = 0xB2;
+    G_IMU_Data_B[23] = 0xFF;
+    G_IMUDataA_Counter = 0;                  //IMU采集的次数计数值	    
+    G_IMUDataB_Counter = 0;      
+    
+    // 全局变量_SDCard存储缓存        
     memset(G_CollectData,0,512);
-    G_CollectData_Counter = 0;
-    
-    //IMU数据
-    memset(G_IMU_Data1,0,28);
-    G_IMU_Data1[0] = 0xA1;
-	G_IMU_Data1[1] = 0xA2;
-    G_IMU_Data1[27] = 0xFF;
-    memset(G_IMU_Data2,0,28);
-    G_IMU_Data2[0] = 0xA1;
-	G_IMU_Data2[1] = 0xA3;
-    G_IMU_Data2[27] = 0xFF;
-    G_IMUData_Counter    = 0;                     
-    
+    G_CollectData_Counter = 0;    
+    //全局变量_SDCard文件操作标识 
+    G_SDCard_FileIsOpen = 0;                    //标记是否已经打开文件 没打开，默认为0
+
 
 
 //    
@@ -239,90 +253,96 @@ static uint8_t ucINIT_Peripheral()
     NRF_LOG_INFO(("||Initialize||-->INT----------->error  0x%x"),err_code);   
     NRF_LOG_FLUSH();    
   
-
+    ucINTStart_SDCard();
 /**
  * 2. 计时器初始化    
  */
     /* (1) 1ms 计时器 初始化 使用的TIMR3 */   
-    err_code |= ucTimerInitial_3();      /* TIMER3 计数器初始化*/ 
-    err_code |= ucTimerInitial_4();
-    NRF_LOG_INFO(("||Initialize||-->TIMER---------->error  0x%x"),err_code);  
-    NRF_LOG_FLUSH();
+//    err_code |= ucTimerInitial_3();      /* TIMER3 计数器初始化*/ 
+//    err_code |= ucTimerInitial_2();
+//    err_code |= ucTimerInitial_4();
+//    NRF_LOG_INFO(("||Initialize||-->TIMER---------->error  0x%x"),err_code);  
+//    NRF_LOG_FLUSH();
 
-/**
- * 3. 初始化SDCard 并建立记录文件    
- */
+///**
+// * 3. 初始化SDCard 并建立记录文件    
+// */
 
-    err_code |= ucSDCard_INIT();   
-    err_code |= ucSDCard_OpenFile();      
-    //LeoDebug
-//    nrf_delay_ms(1000);
-//    err_code |= ucSDCard_SaveData(&err_code,sizeof(err_code));
-//    err_code |= ucSDCard_CloseFile();
-    NRF_LOG_INFO(("||Initialize||-->SDCard--------->error  0x%x"),err_code); 
-    NRF_LOG_FLUSH();   
+//    err_code |= ucSDCard_INIT();  
+//    if(err_code == 0)
+//    {
+//        G_SDCard_FileIsOpen = 1;
+//    }
+//    NRF_LOG_INFO(("||Initialize||-->SDCard--------->error  0x%x"),err_code); 
+//    NRF_LOG_FLUSH();   
 
-
-
-/**
- * 4. 初始化 IMU 
-       MPU9250初始化，利用SPI对I2C进行控制时，利用片选管脚总是失败！！，只能重复 SPI init和uint了！！！
- */
-    
-    /* (1) 初始化IMU_A的SPI配置 并初始化IMU_B  */
-    //关闭 IMU_B 的 nCS管脚
-    err_code |= nrfx_gpiote_out_init(configGPIO_SPI_MPU2_CS,&tconfigGPIO_OUT);
-    nrfx_gpiote_out_set(configGPIO_SPI_MPU2_CS);  //输出1     
-    nrf_delay_us(10);
-    nrf_drv_spi_config_t SPI_config = NRF_DRV_SPI_DEFAULT_CONFIG;
-	SPI_config.sck_pin 			= configGPIO_SPI_CollectData_SCK;
-	SPI_config.mosi_pin 		= configGPIO_SPI_CollectData_MOSI;
-	SPI_config.miso_pin 		= configGPIO_SPI_CollectData_MISO;   
-    SPI_config.ss_pin			= configGPIO_SPI_MPU1_CS;               //第一个IMU的nCS管脚
-	SPI_config.irq_priority	    = SPI_DEFAULT_CONFIG_IRQ_PRIORITY;		//系统SPI中断权限默认设定为 7 
-	SPI_config.orc				= 0xFF;
-	SPI_config.frequency		= NRF_DRV_SPI_FREQ_500K;				//MPU9255 SPI使用的范围为 100KHz~1MHz
-	SPI_config.mode             = NRF_DRV_SPI_MODE_0;                     
-    SPI_config.bit_order        = NRF_DRV_SPI_BIT_ORDER_MSB_FIRST;	
-	//依据配置参数 对 实例spi 进行初始化 
-	err_code |= nrf_drv_spi_init(&SPI_CollectData, &SPI_config, NULL,NULL);	
-    nrf_delay_ms(3);
-    //初始化 IMU_A
-    err_code |= ucMPU9255_INIT();    
-    NRF_LOG_INFO(("||Initialize||-->IMU_A----------->error  0x%x"),err_code);
-    NRF_LOG_FLUSH();
-    //卸载SPI
-    nrf_drv_spi_uninit(&SPI_CollectData);
-    nrf_delay_ms(3);
-    //关闭 IMU_A nCS 管脚
-    err_code |= nrfx_gpiote_out_init(configGPIO_SPI_MPU1_CS,&tconfigGPIO_OUT);
-    nrfx_gpiote_out_set(configGPIO_SPI_MPU1_CS);  //输出1       
+///**
+// * 4. 初始化 IMU 
+//       MPU9250初始化，利用SPI对I2C进行控制时，利用片选管脚总是失败！！，只能重复 SPI init和uint了！！！
+// */
+//    
+//    /* (1) 初始化IMU_A的SPI配置 并初始化IMU_B  */
+//    //关闭 IMU_B 的 nCS管脚
+//    err_code |= nrfx_gpiote_out_init(configGPIO_SPI_IMUB_nCS,&tconfigGPIO_OUT);
+//    nrfx_gpiote_out_set(configGPIO_SPI_IMUB_nCS);  //输出1     
+//    nrf_delay_us(10);
+//    nrf_drv_spi_config_t SPI_config = NRF_DRV_SPI_DEFAULT_CONFIG;
+//	SPI_config.sck_pin 			= configGPIO_SPI_CollectData_SCK;
+//	SPI_config.mosi_pin 		= configGPIO_SPI_CollectData_MOSI;
+//	SPI_config.miso_pin 		= configGPIO_SPI_CollectData_MISO;   
+//    SPI_config.ss_pin			= configGPIO_SPI_IMUA_nCS;               //第一个IMU的nCS管脚
+//	SPI_config.irq_priority	    = SPI_DEFAULT_CONFIG_IRQ_PRIORITY;		//系统SPI中断权限默认设定为 7 
+//	SPI_config.orc				= 0xFF;
+//	SPI_config.frequency		= NRF_DRV_SPI_FREQ_500K;				//MPU9255 SPI使用的范围为 100KHz~1MHz
+//	SPI_config.mode             = NRF_DRV_SPI_MODE_0;                     
+//    SPI_config.bit_order        = NRF_DRV_SPI_BIT_ORDER_MSB_FIRST;	
+//	//依据配置参数 对 实例spi 进行初始化 
+//	err_code |= nrf_drv_spi_init(&SPI_CollectData, &SPI_config, NULL,NULL);	
+//    NRF_LOG_INFO(("||Initialize||-->IMU_A_SPI-------->error  0x%x"),err_code);
+//    NRF_LOG_FLUSH();
+//    //初始化 IMU_A
+//    G_MAG_Coeffi[0] = 0xA1;
+//    G_MAG_Coeffi[1] = 0xA1;
+//    G_MAG_Coeffi[5] = 0xFF;
+//    err_code |= ucMPU9255_INIT();    
+//    NRF_LOG_INFO(("||Initialize||-->IMU_A----------->error  0x%x"),err_code);
+//    NRF_LOG_FLUSH();
+//    //卸载SPI
+//    nrf_drv_spi_uninit(&SPI_CollectData);
+//    nrf_delay_ms(3);
+//    //关闭 IMU_A nCS 管脚
+//    err_code |= nrfx_gpiote_out_init(configGPIO_SPI_IMUA_nCS,&tconfigGPIO_OUT);
+//    nrfx_gpiote_out_set(configGPIO_SPI_IMUA_nCS);  //输出1       
         
     
     /* (2) 初始化第二个IMU_B  */  	
-    SPI_config.ss_pin			= configGPIO_SPI_MPU2_CS;               //第二个IMU的nCS管脚
-    //IMU_B nCS 管脚恢复
-    nrfx_gpiote_out_uninit(configGPIO_SPI_MPU2_CS);
-	//依据配置参数 对 实例spi 进行初始化 
-    err_code |= nrf_drv_spi_init(&SPI_CollectData, &SPI_config, NULL,NULL);	
-    nrf_delay_ms(3);
-    err_code |= ucMPU9255_INIT();    
-    NRF_LOG_INFO(("||Initialize||-->IMU_B----------->error  0x%x"),err_code);
-    NRF_LOG_FLUSH();
-    //卸载SPI
-    nrf_drv_spi_uninit(&SPI_CollectData);
-    nrf_delay_ms(3);
-    //关闭 IMU_B nCS 管脚    
-    err_code |= nrfx_gpiote_out_init(configGPIO_SPI_MPU2_CS,&tconfigGPIO_OUT);
-    nrfx_gpiote_out_set(configGPIO_SPI_MPU2_CS);  //输出1      
+//    SPI_config.ss_pin			= configGPIO_SPI_IMUB_nCS;               //第二个IMU的nCS管脚
+//    //IMU_B nCS 管脚恢复
+//    nrfx_gpiote_out_uninit(configGPIO_SPI_IMUB_nCS);
+//	//依据配置参数 对 实例spi 进行初始化 
+//    err_code |= nrf_drv_spi_init(&SPI_CollectData, &SPI_config, NULL,NULL);	
+//    nrf_delay_ms(3);    
+//    //初始化 IMU_B
+//    G_MAG_Coeffi[0] = 0xA2;
+//    G_MAG_Coeffi[1] = 0xA2;
+//    G_MAG_Coeffi[5] = 0xFF;
+//    err_code |= ucMPU9255_INIT();    
+//    NRF_LOG_INFO(("||Initialize||-->IMU_B----------->error  0x%x"),err_code);
+//    NRF_LOG_FLUSH();
+//    //卸载SPI
+//    nrf_drv_spi_uninit(&SPI_CollectData);
+//    nrf_delay_ms(3);
+//    //关闭 IMU_B nCS 管脚    
+//    err_code |= nrfx_gpiote_out_init(configGPIO_SPI_IMUB_nCS,&tconfigGPIO_OUT);
+//    nrfx_gpiote_out_set(configGPIO_SPI_IMUB_nCS);  //输出1      
     
-    /* (3) 配置正确的IMU SPI  */  
-    //配置SPI 其中nCS不设定，初始化
-    SPI_config.ss_pin			= NRF_DRV_SPI_PIN_NOT_USED;         //不使用nCS管脚
-    SPI_config.frequency		= NRF_DRV_SPI_FREQ_1M;    
-    err_code |= nrf_drv_spi_init(&SPI_CollectData, &SPI_config, NULL,NULL);	   
-    NRF_LOG_INFO(("||Initialize||-->SPI_CollectData->error  0x%x"),err_code); 
-    NRF_LOG_FLUSH(); 
+//    /* (3) 配置正确的IMU SPI  */  
+//    //配置SPI 其中nCS不设定，初始化
+//    SPI_config.ss_pin			= NRF_DRV_SPI_PIN_NOT_USED;         //不使用nCS管脚
+//    SPI_config.frequency		= NRF_DRV_SPI_FREQ_1M;    
+//    err_code |= nrf_drv_spi_init(&SPI_CollectData, &SPI_config, NULL,NULL);	   
+//    NRF_LOG_INFO(("||Initialize||-->SPI_CollectData->error  0x%x"),err_code); 
+//    NRF_LOG_FLUSH(); 
     
     
 //    while(1)
@@ -336,37 +356,43 @@ static uint8_t ucINIT_Peripheral()
     return err_code;
 }
 
-
+///*------------------------------------------------------------
+// *SDCard新建文件任务 函数
+// *------------------------------------------------------------*/
+//static void vTask_LED_Quick(void *pvParameters)
+//{
+//    
+//}
 
 
 /*------------------------------------------------------------
  *SDCard新建文件任务 函数
  *------------------------------------------------------------*/
-static void vTask_SDCard_Open(void *pvParameters)
-{
-    uint8_t i = 0;
-    uint8_t erro_code = 0;
-    while(1)
-    {
-        /*(1) 等待任务通知     */
-        xTaskNotifyWait(0x00000000,     
-                        0xFFFFFFFF,     
-                        NULL,                 /* 保存ulNotifiedValue到变量ulValue中 如果不用可以设为NULL */
-                        portMAX_DELAY);       /* 最大允许延迟时间 portMAX_DELAY 表示永远等待*/
-        
-        erro_code = ucSDCard_OpenFile();
-        if(erro_code == 0)
-        {
-            for(i=0;i<15;i++)
-            {
-                nrfx_gpiote_out_toggle(configGPIO_LED_R);
-                nrf_delay_ms(200);
-            } 
-            G_SDCard_FileIsOpen = 1;
-            nrfx_gpiote_out_clear(configGPIO_LED_R);
-        }        
-    }
-}
+//static void vTask_SDCard_Open(void *pvParameters)
+//{
+//    uint8_t i = 0;
+//    uint8_t erro_code = 0;
+//    while(1)
+//    {
+//        /*(1) 等待任务通知     */
+//        xTaskNotifyWait(0x00000000,     
+//                        0xFFFFFFFF,     
+//                        NULL,                 /* 保存ulNotifiedValue到变量ulValue中 如果不用可以设为NULL */
+//                        portMAX_DELAY);       /* 最大允许延迟时间 portMAX_DELAY 表示永远等待*/
+//        
+//        erro_code = ucSDCard_OpenFile();
+//        if(erro_code == 0)
+//        {
+//            for(i=0;i<15;i++)
+//            {
+//                nrfx_gpiote_out_toggle(configGPIO_LED_R);
+//                nrf_delay_ms(200);
+//            } 
+//            G_SDCard_FileIsOpen = 1;
+//            nrfx_gpiote_out_clear(configGPIO_LED_R);
+//        }        
+//    }
+//}
 
 /*------------------------------------------------------------
  *SDCard关闭文件任务 函数
@@ -377,14 +403,16 @@ static void vTask_SDCard_Close(void *pvParameters)
     uint8_t erro_code = 0;
     while(1)
     {
-        /*(1) 等待任务通知     */
+        //(1) 等待任务通知     
         xTaskNotifyWait(0x00000000,     
                         0xFFFFFFFF,     
                         NULL,                 /* 保存ulNotifiedValue到变量ulValue中 如果不用可以设为NULL */
-                        portMAX_DELAY);       /* 最大允许延迟时间 portMAX_DELAY 表示永远等待*/
+                        portMAX_DELAY);       /* 最大允许延迟时间 portMAX_DELAY 表示永远等待*/     
         
-        G_SDCard_FileIsOpen = 0;
+        //(3)关闭文件存储
         erro_code = ucSDCard_CloseFile();
+        
+        //(4)LED灯快闪
         if(erro_code == 0)
         {
             for(i=0;i<15;i++)
@@ -416,9 +444,8 @@ static void vTask_SDCard_Save(void *pvParameters)
                         portMAX_DELAY);       /* 最大允许延迟时间 portMAX_DELAY 表示永远等待*/
         
         /*(2) 获取资源     */
-//        if(G_CollectData_Counter >= 256)
-//        {
-
+        if(G_CollectData_Counter > 0)
+        {
             if(xSemaphoreTake( xMutex_SDCDBuffer, ( TickType_t ) 5 ) == pdTRUE)
             {
                 memcpy(tData,G_CollectData,G_CollectData_Counter);
@@ -445,9 +472,9 @@ static void vTask_SDCard_Save(void *pvParameters)
                 NRF_LOG_FLUSH(); 
             }
             
-//        }else{
-//            continue;
-//        }
+        }else{
+            continue;
+        }
     }        
 }
 
@@ -468,30 +495,38 @@ static void vTask_CollectData(void *pvParameters)
                         NULL,                 /* 保存ulNotifiedValue到变量ulValue中 如果不用可以设为NULL */
                         portMAX_DELAY);       /* 最大允许延迟时间 portMAX_DELAY 表示永远等待*/      
         
+        //(2)记录整秒数据
+        memcpy(G_GPSWeekSecond_Data+2,&G_GPSWeekSecond,sizeof(G_GPSWeekSecond));
+        memcpy(G_CollectData+G_CollectData_Counter,G_GPSWeekSecond_Data,sizeof(G_GPSWeekSecond_Data));
+        G_CollectData_Counter = G_CollectData_Counter + sizeof(G_GPSWeekSecond_Data);        
         
-        /*(2) 采集MPU9255A 的数据 */ 
-        nrfx_gpiote_out_clear(configGPIO_SPI_MPU1_CS);    
-        Leo_MPU9255_Read_ACC(G_IMU_Data1);
-        Leo_MPU9255_Read_Gyro(G_IMU_Data1);
-        Leo_MPU9255_Read_Magnetic(G_IMU_Data1);  
-        nrfx_gpiote_out_set(configGPIO_SPI_MPU1_CS);          
-        /*(3) 采集MPU9255B 的数据 */        
-//        nrfx_gpiote_out_clear(configGPIO_SPI_MPU2_CS);    
-//        Leo_MPU9255_Read_ACC(G_IMU_Data2);
-//        Leo_MPU9255_Read_Gyro(G_IMU_Data2);
-//        Leo_MPU9255_Read_Magnetic(G_IMU_Data2);  
-//        nrfx_gpiote_out_set(configGPIO_SPI_MPU2_CS);          
+        //(3)采集IMU_A 的数据  
+        memcpy(G_IMU_Data_A+2,&G_MicroSecond,sizeof(G_MicroSecond));
+        nrfx_gpiote_out_clear(configGPIO_SPI_IMUA_nCS);    
+        Leo_MPU9255_Read_ACC(G_IMU_Data_A+5);
+        Leo_MPU9255_Read_Gyro(G_IMU_Data_A+11);
+        Leo_MPU9255_Read_Magnetic(G_IMU_Data_A+17);  
+        nrfx_gpiote_out_set(configGPIO_SPI_IMUA_nCS);   
+        
+        //(4)采集IMU_B 的数据
+//        memcpy(G_IMU_Data_B+2,&G_MicroSecond,sizeof(G_MicroSecond));        
+//        nrfx_gpiote_out_clear(configGPIO_SPI_IMUB_nCS);    
+//        Leo_MPU9255_Read_ACC(G_IMU_Data_B+5);
+//        Leo_MPU9255_Read_Gyro(G_IMU_Data_B+11);
+//        Leo_MPU9255_Read_Magnetic(G_IMU_Data_B+17);  
+//        nrfx_gpiote_out_set(configGPIO_SPI_IMUB_nCS);    
+        
         /*(4) 采集压力传感器 的数据  未完成*/      
         
         
         /*(5) 都采集完了,整体存储 
-         *    等待3ms，如果还没有释放，则放弃此次存储*/
+         *    等待4ms，如果还没有释放，则放弃此次存储*/
         if(xSemaphoreTake( xMutex_SDCDBuffer, ( TickType_t ) 4 ) == pdTRUE)
         {
-            memcpy(G_CollectData+G_CollectData_Counter,G_IMU_Data1,sizeof(G_IMU_Data1));
-            G_CollectData_Counter = G_CollectData_Counter + sizeof(G_IMU_Data1);
-//            memcpy(G_CollectData+G_CollectData_Counter,G_IMU_Data2,sizeof(G_IMU_Data2));
-//            G_CollectData_Counter = G_CollectData_Counter + sizeof(G_IMU_Data2);        
+            memcpy(G_CollectData+G_CollectData_Counter,G_IMU_Data_A,sizeof(G_IMU_Data_A));
+            G_CollectData_Counter = G_CollectData_Counter + sizeof(G_IMU_Data_A);
+//            memcpy(G_CollectData+G_CollectData_Counter,G_IMU_Data_B,sizeof(G_IMU_Data_B));
+//            G_CollectData_Counter = G_CollectData_Counter + sizeof(G_IMU_Data_B);        
             //释放资源
             xSemaphoreGive( xMutex_SDCDBuffer ); 
             //通知 SDCard存储任务
@@ -529,7 +564,31 @@ static uint8_t ucINIT_Task()
         erro_code = 1;
     }
     
-    /*(2) 建立采集任务 */
+    /*(2) 建立SDCard存储任务 */    
+    txResult = xTaskCreate(vTask_SDCard_Save,
+                            "SDCardSave",
+                            configMINIMAL_STACK_SIZE+400,
+                            NULL,
+                            taskPRIO_SDCard_Save,
+                            &xTaskHandle_SDCard_Save);
+    if(txResult != pdPASS)
+    {
+        erro_code = 1;
+    }     
+    
+    /*(3) 建立SDCard 关闭文件任务 */      
+    txResult = xTaskCreate(vTask_SDCard_Close,
+                            "SDCardClose",
+                            configMINIMAL_STACK_SIZE,
+                            NULL,
+                            taskPRIO_SDCard_Close,
+                            &xTaskHandle_SDCard_Close);
+    if(txResult != pdPASS)
+    {
+        erro_code = 1;
+    }     
+    
+    /*(4) 建立采集任务 5ms */
     txResult = xTaskCreate(vTask_CollectData,
                             "CollectData",
                             configMINIMAL_STACK_SIZE+200,
@@ -540,43 +599,6 @@ static uint8_t ucINIT_Task()
     {
         erro_code = 1;
     }
-    
-    /*(3) 建立SDCard存储任务 */    
-    txResult = xTaskCreate(vTask_SDCard_Save,
-                            "SDCardSave",
-                            configMINIMAL_STACK_SIZE+400,
-                            NULL,
-                            taskPRIO_SDCard_Save,
-                            &xTaskHandle_SDCard_Save);
-    if(txResult != pdPASS)
-    {
-        erro_code = 1;
-    }    
-    
-    /*(4) 建立SDCard 新建文件任务 */      
-    txResult = xTaskCreate(vTask_SDCard_Open,
-                            "SDCardOpen",
-                            configMINIMAL_STACK_SIZE,
-                            NULL,
-                            taskPRIO_SDCard_Open,
-                            &xTaskHandle_SDCard_Open);
-    if(txResult != pdPASS)
-    {
-        erro_code = 1;
-    }     
-    
-    /*(4) 建立SDCard 关闭文件任务 */      
-    txResult = xTaskCreate(vTask_SDCard_Close,
-                            "SDCardClose",
-                            configMINIMAL_STACK_SIZE,
-                            NULL,
-                            taskPRIO_SDCard_Close,
-                            &xTaskHandle_SDCard_Close);
-    if(txResult != pdPASS)
-    {
-        erro_code = 1;
-    }       
-    
     
     return erro_code;  
 }
@@ -623,237 +645,26 @@ static void vTask_StartINIT(void *pvParameters)
     }else{
         nrfx_gpiote_out_clear(configGPIO_LED_R);
     }       
+    
 /**
  * 2. 中断及定时器 启动  未完成
  */
     //(1)计时器启动
     err_code |= ucTimerStart_3();      /* TIMER3 计数器初始化*/ 
     err_code |= ucTimerStart_4();
+    err_code |= ucTimerStart_2();
     
     //(2)中断启动
     ucINTStart_SDCard();
+    ucINTStart_PPS();
+    
+    
 /**
  * 3. 删除启动任务    
  */
-    vTaskDelete(xTaskHandle_TaskINIT);
-    NRF_LOG_INFO("||  Start  ||-->TaskINI is Delete!!");
+    NRF_LOG_INFO("||  Start  ||-->TaskINI is Finished!!");
     NRF_LOG_FLUSH();
-/*----------------------------------------------------------------------------*/      
-    
-// 
-///*----------------------------------------------------------------------------*/ 
-//    
-//    char tcTest[] = "This is just a test!";
-//    err_code |= ucSDCard_SaveData(tcTest,sizeof(tcTest)); 
-//    NRF_LOG_INFO(("||Initialize||-->SDCard Save Test--->error  0x%x"),err_code); 
-//    NRF_LOG_FLUSH(); 
-
-
-///**
-// * 6. 初始化 GPS串口接收    
-// */
-//    err_code |= ucGPS_INTUART();    
-//    NRF_LOG_INFO(("||Initialize||-->GPS Uart------->error  0x%x"),err_code); 
-//    NRF_LOG_FLUSH();
-///*----------------------------------------------------------------------------*/ 
-
-///**
-// * 7. 对上面初始化的结果进行LED灯显示
-// *      红灯亮：初始化完成正确；
-// *      红灯闪：初始化错误！ 
-// */
-//    if(err_code != 0)
-//    {
-//        NRF_LOG_INFO("Warning Warning Warning......Initialization is Wrong!!!!!"); 
-//        NRF_LOG_FLUSH();
-//        //出错，死循环闪烁
-//        while(1)
-//        {
-//            nrf_delay_ms(250);
-//            nrf_gpio_pin_toggle(configGPIO_LED_R);            
-//        }        
-//    }else
-//    {
-//        //正确，红灯亮
-//        nrfx_gpiote_out_clear(configGPIO_LED_R);
-//    }
-///*----------------------------------------------------------------------------*/ 
-//    
-///**
-// * 8. 和任务相关的初始化 
-// */    
-
-//    
-//    /*(2) 单次时间任务的建立 启动中断等 */
-//    xTimers_StartINT = xTimerCreate("StartINT",             /* 定时器名字 */
-//                                  30000,                    /* 定时器周期,单位时钟节拍 */
-//                                  pdFALSE,                  /* 周期性 */
-//                                  (void *) 1,               /* 定时器ID */
-//                                  TimerFunction_StartINT);  /* 定时器回调函数 */
-//     if(xTimers_StartINT == NULL)
-//     {
-//         /* The timer was not created. */
-//        NRF_LOG_INFO("||Warning||-->StartINT Create is failed!!");
-//        NRF_LOG_FLUSH();
-//        //出错，死循环闪烁
-//        while(1)
-//        {
-//            nrf_delay_ms(250);
-//            nrf_gpio_pin_toggle(configGPIO_LED_R);            
-//        } 
-//     }                                 
-//                                  
-//                                  
-//    /*(3) 循环时间任务的建立 SDCard存储任务 */
-//    xTimers_StarSDCard = xTimerCreate("SDCard",            /* 定时器名字 */
-//                              10,                /* 定时器周期,单位时钟节拍 */
-//                              pdTRUE,          /* 周期性 */
-//                              (void *) 2,      /* 定时器ID */
-//                              TimerFunction_SDCardSave); /* 定时器回调函数 */
-//     if(xTimers_StarSDCard == NULL)
-//     {
-//         /* The timer was not created. */
-//        NRF_LOG_INFO("||Warning||-->SDCard Create is failed!!");
-//        NRF_LOG_FLUSH();
-//        //出错，死循环闪烁
-//        while(1)
-//        {
-//            nrf_delay_ms(250);
-//            nrf_gpio_pin_toggle(configGPIO_LED_R);            
-//        } 
-//     }                               
-//                                  
-//    //延迟启动时间任务
-//    if((xTimerStart(xTimers_StartINT,0) != pdPASS)||(xTimerStart(xTimers_StarSDCard,0) != pdPASS))
-//     {
-//         /* The timer could not be set into the Active
-//         state. */
-//        NRF_LOG_INFO("||Warning||-->SDCard_Timer Start is failed!!");
-//        NRF_LOG_FLUSH();
-//        //出错，死循环闪烁
-//        while(1)
-//        {
-//            nrf_delay_ms(250);
-//            nrf_gpio_pin_toggle(configGPIO_LED_R);            
-//        }
-//     }                              
-//      
-//         
-//    /*(4) MPU9255任务建立 */
-//    txResult = xTaskCreate(vTask_MPU9255_RxData,
-//                            "MPU9255",
-//                            configMINIMAL_STACK_SIZE+100,
-//                            NULL,
-//                            taskPRIO_MPU9255_RxData,
-//                            &xTaskHandle_MPU9255_RxData);
-//    if(txResult != pdPASS)
-//    {
-//        NRF_LOG_INFO("||Warning||-->TaskMPU9255 Create is failed!!");
-//        NRF_LOG_FLUSH();
-//        //出错，死循环闪烁
-//        while(1)
-//        {
-//            nrf_delay_ms(250);
-//            nrf_gpio_pin_toggle(configGPIO_LED_R);            
-//        } 
-//    }
-//    
-//    /*(5) GPS 任务建立 */
-//    txResult = xTaskCreate(vTask_GPS_RxData,
-//                            "GPS",
-//                            configMINIMAL_STACK_SIZE+100,
-//                            NULL,
-//                            taskPRIO_GPS_RxData,
-//                            &xTaskHandle_GPS_RxData);
-//    if(txResult != pdPASS)
-//    {
-//        NRF_LOG_INFO("||Warning||-->TaskGPS Create is failed!!");
-//        NRF_LOG_FLUSH();
-//        //出错，死循环闪烁
-//        while(1)
-//        {
-//            nrf_delay_ms(250);
-//            nrf_gpio_pin_toggle(configGPIO_LED_R);            
-//        } 
-//    }    
-//    
-//    /*(6) UWB任务建立 */
-//    txResult = xTaskCreate(vTask_UWB_RxData,
-//                            "UWB",
-//                            configMINIMAL_STACK_SIZE+100,
-//                            NULL,
-//                            taskPRIO_UWB_RxData,
-//                            &xTaskHandle_UWB_GetData);
-//    if(txResult != pdPASS)
-//    {
-//        NRF_LOG_INFO("||Warning||-->TaskUWB Create is failed!!");
-//        NRF_LOG_FLUSH();
-//        //出错，死循环闪烁
-//        while(1)
-//        {
-//            nrf_delay_ms(250);
-//            nrf_gpio_pin_toggle(configGPIO_LED_R);            
-//        } 
-//    }   
-//    
-//    /*(7) FootPres任务建立 */
-//    txResult = xTaskCreate(vTask_FootPres_RxData,
-//                            "FootPres",
-//                            configMINIMAL_STACK_SIZE+100,
-//                            NULL,
-//                            taskPRIO_FootPres_RxData,
-//                            &xTaskHandle_FootPres_GetData);
-//    if(txResult != pdPASS)
-//    {
-//        NRF_LOG_INFO("||Warning||-->TaskFootPres Create is failed!!");
-//        NRF_LOG_FLUSH();
-//        //出错，死循环闪烁
-//        while(1)
-//        {
-//            nrf_delay_ms(250);
-//            nrf_gpio_pin_toggle(configGPIO_LED_R);            
-//        } 
-//    }    
-//    
-//    /*(8) 启动 停止存储的任务建立 */  
-//    txResult = xTaskCreate(vTask_DataSave_Start,
-//                            "SaveStart",
-//                            configMINIMAL_STACK_SIZE,
-//                            NULL,
-//                            taskPRIO_DataSave_Start,
-//                            &xTaskHandle_DataSave_Start);
-//    if(txResult != pdPASS)
-//    {
-//        NRF_LOG_INFO("||Warning||-->SaveStart Create is failed!!");
-//        NRF_LOG_FLUSH();
-//        //出错，死循环闪烁
-//        while(1)
-//        {
-//            nrf_delay_ms(250);
-//            nrf_gpio_pin_toggle(configGPIO_LED_R);            
-//        } 
-//    }  
-//    txResult = xTaskCreate(vTask_DataSave_End,
-//                            "SaveEnd",
-//                            configMINIMAL_STACK_SIZE+100,
-//                            NULL,
-//                            taskPRIO_DataSave_End,
-//                            &xTaskHandle_DataSave_End);
-//    if(txResult != pdPASS)
-//    {
-//        NRF_LOG_INFO("||Warning||-->SaveEnd Create is failed!!");
-//        NRF_LOG_FLUSH();
-//        //出错，死循环闪烁
-//        while(1)
-//        {
-//            nrf_delay_ms(250);
-//            nrf_gpio_pin_toggle(configGPIO_LED_R);            
-//        } 
-//    }  
-///*----------------------------------------------------------------------------*/      
-//    
-  
-
+    vTaskDelete(xTaskHandle_TaskINIT);
 }
 
    

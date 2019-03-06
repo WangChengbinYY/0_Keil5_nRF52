@@ -29,7 +29,6 @@ extern uint8_t     G_SDCard_FileIsOpen;               //标记是否已经打开文件
 extern uint32_t         G_GPSWeekSecond;
 extern uint16_t         G_MicroSecond;
 
-extern TaskHandle_t    xTaskHandle_SDCard_Open;         /*SDCard 新建文件任务  句柄 */
 extern TaskHandle_t    xTaskHandle_SDCard_Close;         /*SDCard 关闭文件任务  句柄 */
 
 
@@ -67,8 +66,13 @@ static void vINTHandler_SDCard(nrfx_gpiote_pin_t pin, nrf_gpiote_polarity_t acti
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
     if(nrf_gpio_pin_read(configGPIO_INT_SDCard) == 0)
     {
+        nrfx_gpiote_out_toggle(configGPIO_LED_R);
+        
 //        if(G_SDCard_FileIsOpen == 1)
 //        {
+//            //标志位 清零
+//            G_SDCard_FileIsOpen = 0;
+//            
 //            //通知 关闭文件操作任务
 //            xTaskNotifyFromISR(xTaskHandle_SDCard_Close,    
 //                                0,           
@@ -77,7 +81,7 @@ static void vINTHandler_SDCard(nrfx_gpiote_pin_t pin, nrf_gpiote_polarity_t acti
 //            portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 //        }
         
-        nrfx_gpiote_out_toggle(configGPIO_LED_R);
+
         //任务分析
 //        NRF_LOG_INFO("TEST:   SDCard INT is ok!");
 //        NRF_LOG_FLUSH();
@@ -97,63 +101,6 @@ static void vINTHandler_SDCard(nrfx_gpiote_pin_t pin, nrf_gpiote_polarity_t acti
         
         
     }   
-//        
-//        
-//        
-//        nrf_delay_ms(2);
-//        if(nrf_gpio_pin_read(configGPIO_INT_SDCard) == 0)
-//        {
-//            NRF_LOG_INFO("Fuck");
-//            NRF_LOG_FLUSH(); 
-//            nrfx_gpiote_out_toggle(configGPIO_LED_R);
-//            
-//            if(G_SDCard_FileIsOpen == 0)
-//            {
-//                //通知 打开文件操作任务        
-//                xTaskNotifyFromISR(xTaskHandle_SDCard_Open,    
-//                                    0,           
-//                                    eNoAction,
-//                                    &xHigherPriorityTaskWoken);            
-//                portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
-//                
-//            }else
-//            {
-//                //通知 关闭文件操作任务
-//                xTaskNotifyFromISR(xTaskHandle_SDCard_Close,    
-//                                    0,           
-//                                    eNoAction,
-//                                    &xHigherPriorityTaskWoken);            
-//                portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
-//            }
-//        }
-
-//        
-//    }
-//    
-//    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-//    if(G_Ctrl_DataSave == 0)
-//    {
-//        xTaskNotifyFromISR(xTaskHandle_DataSave_Start,      /* 目标任务 */
-//                           0,                               /* 发送数据 */
-//                           eSetValueWithOverwrite,          /* 如果目标任务上次的数据还没有处理，上次的数据会被覆盖 */
-//                            &xHigherPriorityTaskWoken);
-//         /* 如果xHigherPriorityTaskWoken = pdTRUE，那么退出中断后切到当前最高优先级任务执行 */
-//        portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
-//        nrfx_gpiote_out_clear(configGPIO_LED_G);
-//    }else
-//    {
-//        xTaskNotifyFromISR(xTaskHandle_DataSave_End,        /* 目标任务 */
-//                           0,                               /* 发送数据 */
-//                           eSetValueWithOverwrite,          /* 如果目标任务上次的数据还没有处理，上次的数据会被覆盖 */
-//                            &xHigherPriorityTaskWoken);
-//         /* 如果xHigherPriorityTaskWoken = pdTRUE，那么退出中断后切到当前最高优先级任务执行 */
-//        portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
-//        nrfx_gpiote_out_set(configGPIO_LED_G);
-//    }
-
-//    
-
-  
 
     
 }

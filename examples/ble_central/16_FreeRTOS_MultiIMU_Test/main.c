@@ -44,16 +44,16 @@
 int main(void)
 {  
 
-    ret_code_t err_code;
+    ret_code_t err_code = 0;
     
 /*1. 初始化_LOG日志输出 */    
-    err_code = NRF_LOG_INIT(NULL);
+    err_code |= NRF_LOG_INIT(NULL);
     NRF_LOG_DEFAULT_BACKENDS_INIT();
     NRF_LOG_INFO(("||Initialize||-->LOG----------->error  0x%x"),err_code);
-    NRF_LOG_FLUSH();
-
+    NRF_LOG_FLUSH();  
+    
 /*2. 建立任务  */     
-    err_code = vTask_CreatTask();
+    err_code |= vTask_CreatTask();
     NRF_LOG_INFO(("||Initialize||-->Task_Creat---->error  0x%x"),err_code);
     NRF_LOG_FLUSH();  
 

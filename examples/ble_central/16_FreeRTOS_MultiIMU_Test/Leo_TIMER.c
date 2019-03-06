@@ -24,7 +24,7 @@
 extern uint16_t    G_MicroSecond;
 extern uint32_t    G_GPSWeekSecond;
 extern uint8_t	   G_IMUData_Counter;
-
+extern uint8_t     G_SDCard_FileIsOpen;
 extern TaskHandle_t    xTaskHandle_CollectData;         /*5ms´¥·¢µÄ²É¼¯ÈÎÎñ    ¾ä±ú */
 
 
@@ -36,6 +36,75 @@ extern TaskHandle_t    xTaskHandle_CollectData;         /*5ms´¥·¢µÄ²É¼¯ÈÎÎñ    ¾
  * Your application cannot use RTC1 if you are using FreeRTOS.
  * ÏµÍ³Ä¬ÈÏÉè¶¨µÄ TIMER ÖÐ¶ÏÈ¨ÏÞÎª 7
  */
+
+
+/*========================= TIMER2 µÄÊµÏÖ ============================*/
+/* TIMER2_²ÎÊýÉè¶¨ 
+ * ÓÃÓÚ5msµÄ¼ÆÊ±£¬Êý¾Ý5ms²É¼¯Ò»´Î
+ * ×¢Òâ£ºTICKµÄµ¥Î»ÊÇms                                   */
+#define  configTIMER2_INSTANCE                      2
+#define  configTIMER2_TICK                          5                //ms
+
+const nrfx_timer_t  xTimerInstance_2 = NRFX_TIMER_INSTANCE(configTIMER2_INSTANCE); 
+
+/*-----------------------------------------------------------------------
+ * TIMER2 ´¥·¢»Øµ÷º¯Êý                                                    
+ * Ê¹ÓÃµÄÊÇ    NRF_TIMER_EVENT_COMPARE2 Í¨µÀ±È½ÏÆ÷                        
+*-----------------------------------------------------------------------*/
+static void vTimerHandler_2(nrf_timer_event_t event_type, void* p_context)
+{
+    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+    //5ms ´¥·¢²É¼¯ÈÎÎñ
+    if(event_type == NRF_TIMER_EVENT_COMPARE2)
+    {
+        //Õâ×öÅÐ¶Ï ÊÇ·ñ²É¼¯
+        if(G_SDCard_FileIsOpen == 1)
+        {
+            xTaskNotifyFromISR(xTaskHandle_CollectData,    
+                                0,           
+                                eNoAction,
+                                &xHigherPriorityTaskWoken);            
+            portYIELD_FROM_ISR(xHigherPriorityTaskWoken);  
+        }
+    }
+}
+
+/*-----------------------------------------------------------------------*/
+/* TIMER2 ¼ÆÊýÆ÷³õÊ¼»¯                                                   */
+/*----------------------------------------------------------------------*/
+uint8_t ucTimerInitial_2(void)
+{
+    uint8_t error_code = 0;	
+    nrfx_timer_config_t txTIMEConfig_2 = NRFX_TIMER_DEFAULT_CONFIG;   
+    error_code = nrfx_timer_init(&xTimerInstance_2, &txTIMEConfig_2, vTimerHandler_2);    
+    nrfx_timer_extended_compare(
+                                &xTimerInstance_2, 
+                                NRF_TIMER_CC_CHANNEL2, 
+                                nrfx_timer_ms_to_ticks(&xTimerInstance_2,configTIMER2_TICK), 
+                                NRF_TIMER_SHORT_COMPARE2_CLEAR_MASK, 
+                                true);    
+ 
+    return error_code;
+}
+
+/*-----------------------------------------------------------------------*/
+/* TIMER3 ¼ÆÊýÆ÷Æô¶¯                                                     */
+/*----------------------------------------------------------------------*/
+uint8_t ucTimerStart_2(void)
+{  
+    nrfx_timer_enable(&xTimerInstance_2);  
+    return 0;
+}
+
+
+
+
+
+
+
+
+
+
 
 
 /*========================= TIMER3 µÄÊµÏÖ ============================*/
@@ -53,7 +122,6 @@ const nrfx_timer_t  xTimerInstance_3 = NRFX_TIMER_INSTANCE(configTIMER3_INSTANCE
 *-----------------------------------------------------------------------*/
 static void vTimerHandler_3(nrf_timer_event_t event_type, void* p_context)
 {
-    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
     //´ýÍêÉÆ ´Ë´¦ºóÃæÌí¼Ó 5ms µÄÅÐ¶Ï
     if(event_type == NRF_TIMER_EVENT_COMPARE3)
     {
@@ -65,7 +133,7 @@ static void vTimerHandler_3(nrf_timer_event_t event_type, void* p_context)
             G_MicroSecond = 0;
             G_GPSWeekSecond++;
         }
-        
+/*        
         //(2)ÅÐ¶ÏÊÇ·ñÎª Õû5ms
         if((G_MicroSecond % 5) == 0)
         {
@@ -74,17 +142,13 @@ static void vTimerHandler_3(nrf_timer_event_t event_type, void* p_context)
             //ÊÇ·ñÓÐ³¬¹ý1msµÄÑÓ³Ù£¬Èç¹ûÊý¾ÝµÄmsÊ±¼ä¶¼ÊÇ°´ÕÕ5À´µÝÔöµÄ£¬¾Í²»¿¼ÂÇ
             
             //Í¨Öª Êý¾Ý²É¼¯ ºÍ ²â¾à Î´Íê³É
-//            xTaskNotifyFromISR(xTaskHandle_CollectData,    
-//                                0,           
-//                                eNoAction,
-//                                &xHigherPriorityTaskWoken);            
-//            portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
-            
-            
-
-            
+            xTaskNotifyFromISR(xTaskHandle_CollectData,    
+                                0,           
+                                eNoAction,
+                                &xHigherPriorityTaskWoken);            
+            portYIELD_FROM_ISR(xHigherPriorityTaskWoken);              
         }            
-
+*/
     }
 }
 
