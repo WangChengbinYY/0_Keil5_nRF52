@@ -25,7 +25,7 @@ extern uint16_t    G_MicroSecond;
 extern uint32_t    G_GPSWeekSecond;
 extern uint8_t	   G_IMUData_Counter;
 extern uint8_t     G_SDCard_FileIsOpen;
-extern TaskHandle_t    xTaskHandle_CollectData;         /*5ms触发的采集任务    句柄 */
+//extern TaskHandle_t    xTaskHandle_CollectData;         /*5ms触发的采集任务    句柄 */
 
 
 
@@ -58,14 +58,14 @@ static void vTimerHandler_2(nrf_timer_event_t event_type, void* p_context)
     if(event_type == NRF_TIMER_EVENT_COMPARE2)
     {
         //这做判断 是否采集
-        if(G_SDCard_FileIsOpen == 1)
-        {
-            xTaskNotifyFromISR(xTaskHandle_CollectData,    
-                                0,           
-                                eNoAction,
-                                &xHigherPriorityTaskWoken);            
-            portYIELD_FROM_ISR(xHigherPriorityTaskWoken);  
-        }
+//        if(G_SDCard_FileIsOpen == 1)
+//        {
+//            xTaskNotifyFromISR(xTaskHandle_CollectData,    
+//                                0,           
+//                                eNoAction,
+//                                &xHigherPriorityTaskWoken);            
+//            portYIELD_FROM_ISR(xHigherPriorityTaskWoken);  
+//        }
     }
 }
 

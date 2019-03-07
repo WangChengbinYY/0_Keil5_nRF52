@@ -56,11 +56,11 @@
 #define configTICK_SOURCE FREERTOS_USE_RTC
 
 #define configUSE_PREEMPTION                                                      1
-#define configUSE_PORT_OPTIMISED_TASK_SELECTION                                   1
-#define configUSE_TICKLESS_IDLE                                                   1
+#define configUSE_PORT_OPTIMISED_TASK_SELECTION                                   0
+#define configUSE_TICKLESS_IDLE                                                   0
 #define configUSE_TICKLESS_IDLE_SIMPLE_DEBUG                                      1 /* See into vPortSuppressTicksAndSleep source code for explanation */
 #define configCPU_CLOCK_HZ                                                        ( SystemCoreClock )
-#define configTICK_RATE_HZ                                                        1024
+#define configTICK_RATE_HZ                                                        1000
 #define configMAX_PRIORITIES                                                      ( 5 )     //越小等级越低 不能超过4
 #define configMINIMAL_STACK_SIZE                                                  ( 60 )
 #define configTOTAL_HEAP_SIZE                                                     ( 3*4096 )
@@ -73,7 +73,8 @@
 #define configUSE_ALTERNATIVE_API                                                 0    /* Deprecated! */
 #define configQUEUE_REGISTRY_SIZE                                                 2
 #define configUSE_QUEUE_SETS                                                      0
-#define configUSE_TIME_SLICING                                                    0
+//同级任务使用时间片调度 1
+#define configUSE_TIME_SLICING                                                    1
 #define configUSE_NEWLIB_REENTRANT                                                0
 #define configENABLE_BACKWARD_COMPATIBILITY                                       1
 
@@ -103,7 +104,7 @@
 #define configUSE_TIMERS                                                          1
 #define configTIMER_TASK_PRIORITY                                                 ( 2 )
 #define configTIMER_QUEUE_LENGTH                                                  32
-#define configTIMER_TASK_STACK_DEPTH                                              ( 80 )
+#define configTIMER_TASK_STACK_DEPTH                                              ( 260 )
 
 /* Tickless Idle configuration. */
 #define configEXPECTED_IDLE_TIME_BEFORE_SLEEP                                     2
