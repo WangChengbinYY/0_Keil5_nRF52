@@ -559,9 +559,19 @@
               <FilePath>..\..\..\Leo_SDCard.c</FilePath>
             </File>
             <File>
-              <FileName>Leo_MPU9255.c</FileName>
+              <FileName>Leo_UART.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\..\Leo_MPU9255.c</FilePath>
+              <FilePath>..\..\..\Leo_UART.c</FilePath>
+            </File>
+            <File>
+              <FileName>Leo_IMU.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\Leo_IMU.c</FilePath>
+            </File>
+            <File>
+              <FileName>Leo_SAADC.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\Leo_SAADC.c</FilePath>
             </File>
           </Files>
         </Group>
@@ -1524,6 +1534,11 @@
               <FileName>nrf_drv_spi.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\..\..\..\integration\nrfx\legacy\nrf_drv_spi.c</FilePath>
+            </File>
+            <File>
+              <FileName>nrfx_saadc.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\..\..\..\modules\nrfx\drivers\src\nrfx_saadc.c</FilePath>
             </File>
           </Files>
         </Group>
@@ -3733,9 +3748,19 @@
               <FilePath>..\..\..\Leo_SDCard.c</FilePath>
             </File>
             <File>
-              <FileName>Leo_MPU9255.c</FileName>
+              <FileName>Leo_UART.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\..\Leo_MPU9255.c</FilePath>
+              <FilePath>..\..\..\Leo_UART.c</FilePath>
+            </File>
+            <File>
+              <FileName>Leo_IMU.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\Leo_IMU.c</FilePath>
+            </File>
+            <File>
+              <FileName>Leo_SAADC.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\Leo_SAADC.c</FilePath>
             </File>
           </Files>
         </Group>
@@ -4698,6 +4723,11 @@
               <FileName>nrf_drv_spi.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\..\..\..\integration\nrfx\legacy\nrf_drv_spi.c</FilePath>
+            </File>
+            <File>
+              <FileName>nrfx_saadc.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\..\..\..\modules\nrfx\drivers\src\nrfx_saadc.c</FilePath>
             </File>
           </Files>
         </Group>

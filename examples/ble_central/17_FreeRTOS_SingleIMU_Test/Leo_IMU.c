@@ -1,15 +1,14 @@
 /*
 *********************************************************************************************************
 *
-*    模块名称 : 外部传感器 MPU9255
-*    文件名称 : Leo_MPU9255
+*    模块名称 : 外部传感器 IMU
+*    文件名称 : Leo_IMU
 *    版    本 : V1.0
-*    说    明 : 外部传感器 MPU9255
+*    说    明 : 外部传感器 IMU
 *
 *    修改记录 :
 *        版本号    日期          作者     
-*        V1.0    2019-01-18     Leo
-*        V1.1    2019-02-24     Leo
+*        V1.0    2019-03-10     Leo   
 *
 *    Copyright (C), 2018-2020, Department of Precision Instrument Engineering ,Tsinghua University  
 *
@@ -17,14 +16,15 @@
 */
 
 
-#include "Leo_MPU9255.h"
 
+#include "Leo_IMU.h"
 
-
-extern nrf_drv_spi_t    SPI_CollectData;  			//IMU数据采集使用的SPI实例		
-extern uint8_t	    G_CollectData[512];                 //SDCard要储存数据的缓存
-extern uint16_t	    G_CollectData_Counter;    
-extern uint8_t	    G_MAG_Coeffi[6]; 
+//全局变量_IMU数据采集的 SPI2 实例（UWB 用SPI0；SDCard 用SPI1；多IMU 复用SPI2） 
+nrf_drv_spi_t   SPI_CollectData = NRF_DRV_SPI_INSTANCE(configGPIO_SPI_CollectData_INSTANCE);	
+	
+extern uint8_t	        G_CollectData[512];                 //SDCard要储存数据的缓存
+extern uint16_t	        G_CollectData_Counter;    
+extern uint8_t	        G_MAG_Coeffi[6]; 
 
 
 
@@ -240,12 +240,12 @@ uint8_t ucMPU9255_INIT(void)
 	//2.设置系统输出频率(分频参数)，：SAMPLE_RATE=Internal_Sample_Rate / (1 + SMPLRT_DIV)
 	//	系统实际原始数据采集1kHz，输出是250Hz <***这里不清楚是取平均输出还是什么？？？***>
 	error_code |= Leo_MPU9255_SPI_WriteOneByte(MPU9255_SMPLRT_DIV,MPU9255_SMPLRT_DIV_Rate); 
-	nrf_delay_ms(3);		
+	nrf_delay_ms(30);		
 	
 	//=====================================设置AK8963============================================			
 	//设置位主I2C模式，便于开始对AK8963进行设置
-//	error_code |= Leo_MPU9255_SPI_WriteOneByte(MPU9255_USER_CTRL,MPU9255_USER_CTRL_I2C_MST_EN); 
-	error_code |= Leo_MPU9255_SPI_WriteOneByte(MPU9255_USER_CTRL,0x30); 
+	error_code |= Leo_MPU9255_SPI_WriteOneByte(MPU9255_USER_CTRL,MPU9255_USER_CTRL_I2C_MST_EN); 
+//	error_code |= Leo_MPU9255_SPI_WriteOneByte(MPU9255_USER_CTRL,0x30); 
 	nrf_delay_ms(50);
 	//设置 MPU9255 I2C通信：中断等待；there is a stop between reads；时钟速率 400kHz(这个主机和从机需要一致),
 	error_code |= Leo_MPU9255_SPI_WriteOneByte(MPU9255_I2C_MST_CTRL,MPU9255_I2C_MST_CTRL_MULT_MST_EN|MPU9255_I2C_MST_CTRL_WAIT_FOR_ES|MPU9255_I2C_MST_CTRL_I2C_MST_P_NSR|MPU9255_I2C_MST_CTRL_I2C_MST_CLK); 
@@ -409,4 +409,80 @@ uint8_t Leo_MPU9255_Read_Magnetic(uint8_t * Data)
 //  *pMAG_Z = (buf_change[4] << 8) | buf_change[5];
 //	if(*pMAG_Z & 0x8000) *pMAG_Z-=65536;
 }
+
+/**
+ * IMU 初始化
+ *   采用 管脚共享方式，初始化 IMU_A 和 IMU_B
+*/
+uint8_t ucIMUInitial(void)
+{
+    uint8_t error_code = 0;
+//  MPU9250初始化，利用SPI对I2C进行控制时，利用片选管脚总是失败！！，只能重复 SPI init和uint了！！！  
+    //(1) 初始化IMU_A的SPI配置 
+    //先将IMU_B的片选置高
+    nrfx_gpiote_out_config_t tconfigGPIO_OUT =  NRFX_GPIOTE_CONFIG_OUT_SIMPLE(true);
+    error_code |= nrfx_gpiote_out_init(configGPIO_SPI_IMUB_nCS,&tconfigGPIO_OUT);
+    nrfx_gpiote_out_set(configGPIO_SPI_IMUB_nCS);       
+    nrf_delay_us(1);    
+    //初始化 IMU_A 的 SPI
+    nrf_drv_spi_config_t SPI_config = NRF_DRV_SPI_DEFAULT_CONFIG;
+	SPI_config.sck_pin 			= configGPIO_SPI_CollectData_SCK;
+	SPI_config.mosi_pin 		= configGPIO_SPI_CollectData_MOSI;
+	SPI_config.miso_pin 		= configGPIO_SPI_CollectData_MISO;   
+    SPI_config.ss_pin			= configGPIO_SPI_IMUA_nCS;               //第一个IMU的nCS管脚
+	SPI_config.irq_priority	    = SPI_DEFAULT_CONFIG_IRQ_PRIORITY;		//系统SPI中断权限默认设定为 7 
+	SPI_config.orc				= 0xFF;
+	SPI_config.frequency		= NRF_DRV_SPI_FREQ_500K;				//MPU9255 SPI使用的范围为 100KHz~1MHz
+	SPI_config.mode             = NRF_DRV_SPI_MODE_0;                     
+    SPI_config.bit_order        = NRF_DRV_SPI_BIT_ORDER_MSB_FIRST;	
+	//依据配置参数 对 实例spi 进行初始化 
+	error_code |= nrf_drv_spi_init(&SPI_CollectData, &SPI_config, NULL,NULL);	
+    //初始化 IMU_A
+    G_MAG_Coeffi[0] = 0xA1;
+    G_MAG_Coeffi[1] = 0xA1;
+    G_MAG_Coeffi[5] = 0xFF;
+    error_code |= ucMPU9255_INIT();    
+    NRF_LOG_INFO(("||Initialize||-->IMU_A(U4)------->error  0x%x"),error_code);
+    //卸载SPI
+    nrf_drv_spi_uninit(&SPI_CollectData);
+    //关闭 IMU_A nCS 置高
+    error_code |= nrfx_gpiote_out_init(configGPIO_SPI_IMUA_nCS,&tconfigGPIO_OUT);
+    nrfx_gpiote_out_set(configGPIO_SPI_IMUA_nCS);  //输出1  
+    
+    //(2)初始化 IMU_B
+    //恢复 IMU_B nCS管脚，并设定 SPI
+//    nrfx_gpiote_out_uninit(configGPIO_SPI_IMUB_nCS);
+//    SPI_config.ss_pin = configGPIO_SPI_IMUB_nCS;               //第二个IMU的nCS管脚
+//    error_code |= nrf_drv_spi_init(&SPI_CollectData, &SPI_config, NULL,NULL);
+//    //初始化 IMU_B
+//    G_MAG_Coeffi[0] = 0xA2;
+//    G_MAG_Coeffi[1] = 0xA2;
+//    G_MAG_Coeffi[5] = 0xFF;
+//    error_code |= ucMPU9255_INIT();    
+//    NRF_LOG_INFO(("||Initialize||-->IMU_B----------->error  0x%x"),error_code);
+//    NRF_LOG_FLUSH();
+//    //卸载SPI
+//    nrf_drv_spi_uninit(&SPI_CollectData);
+//    //关闭 IMU_B nCS 管脚    
+//    error_code |= nrfx_gpiote_out_init(configGPIO_SPI_IMUB_nCS,&tconfigGPIO_OUT);
+//    nrfx_gpiote_out_set(configGPIO_SPI_IMUB_nCS);  //输出1          
+//    nrf_delay_us(1);
+    
+    /* (3) 配置正确的IMU SPI  */  
+    //配置SPI 其中nCS不设定，初始化
+    SPI_config.ss_pin			= NRF_DRV_SPI_PIN_NOT_USED;         //不使用nCS管脚
+    SPI_config.frequency		= NRF_DRV_SPI_FREQ_1M;    
+    error_code |= nrf_drv_spi_init(&SPI_CollectData, &SPI_config, NULL,NULL);	   
+    NRF_LOG_INFO(("||Initialize||-->IMU_SPI--------->error  0x%x"),error_code); 
+    NRF_LOG_FLUSH();     
+    
+    return error_code;  
+    
+}
+
+
+
+
+
+
 

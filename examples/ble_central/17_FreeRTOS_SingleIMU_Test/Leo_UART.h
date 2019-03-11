@@ -1,14 +1,14 @@
 /*
 *********************************************************************************************************
 *
-*    模块名称 : 外部硬件中断配置
-*    文件名称 : Leo_INT
+*    模块名称 : 外部串口配置
+*    文件名称 : Leo_UART
 *    版    本 : V1.0
-*    说    明 : 外部硬件中断设置相关
+*    说    明 : 外部串口设置相关
 *
 *    修改记录 :
 *        版本号    日期          作者     
-*        V1.0    2019-01-14     Leo   
+*        V1.0    2019-03-09     Leo   
 *
 *    Copyright (C), 2018-2020, Department of Precision Instrument Engineering ,Tsinghua University  
 *
@@ -16,8 +16,8 @@
 */
 
 
-#ifndef LEO_INT_H
-#define LEO_INT_H
+#ifndef LEO_UART_H
+#define LEO_UART_H
 
 #include "Leo_Includes.h"
 
@@ -26,31 +26,17 @@
 extern "C" {
 #endif
 
-/* SDCard 存储暂停中断 初始化  */  
-uint8_t ucINTInital_SDCard(void);    
+/* GPS串口初始化
+ *    返回 0 成功；返回 1 失败  */    
+uint8_t ucUARTInital_GPS(void);  
     
-
-/* SDCard 存储暂停中断 启动  */
-uint8_t ucINTStart_SDCard(void);  
+/**
+ * GPS UTC时间转 周内秒  */
+void UTC2GPS(int year, int month, int day, int hour, int minute, int second, /*int *weekNo,*/ uint32_t *secondOfweek);    
     
-
-/* 1pps 中断初始化 */
-uint8_t ucINTInital_PPS(void);    
-    
-
-/* 1pps 中断 启动 */
-uint8_t ucINTStart_PPS(void);    
-
 #ifdef __cplusplus
 }
 #endif
 
 
 #endif 
-
-
-
-
-
-
-

@@ -25,11 +25,11 @@
 *********************************************************************************************************
 */
 
-extern uint8_t     G_SDCard_FileIsOpen;               //标记是否已经打开文件
-extern uint32_t         G_GPSWeekSecond;
-extern uint16_t         G_MicroSecond;
+extern uint8_t      G_SDCard_FileIsOpen;               //标记是否已经打开文件
+extern uint32_t     G_GPSWeekSecond;
+extern uint16_t     G_MicroSecond;
 
-extern TaskHandle_t    xTaskHandle_SDCard_Close;         /*SDCard 关闭文件任务  句柄 */
+extern TaskHandle_t xTaskHandle_SDCard_Close;         /*SDCard 关闭文件任务  句柄 */
 
 
 
@@ -66,6 +66,7 @@ static void vINTHandler_SDCard(nrfx_gpiote_pin_t pin, nrf_gpiote_polarity_t acti
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
     if(nrf_gpio_pin_read(configGPIO_INT_SDCard) == 0)
     {
+        //测试用
         nrfx_gpiote_out_toggle(configGPIO_LED_R);
         
         if(G_SDCard_FileIsOpen == 1)
@@ -199,10 +200,11 @@ static void vINTHandler_PPS(nrfx_gpiote_pin_t pin, nrf_gpiote_polarity_t actio)
     //收到GPS 1PPS秒脉冲
     G_GPSWeekSecond++;
     G_MicroSecond = 0;
-//		if(G_SDCard_IsSaved == 1)
-//		{
-//			nrf_gpio_pin_toggle(Leo_nRF52_LED_GREEN);
-//		}
+    if(G_SDCard_FileIsOpen == 1)
+    {
+//        nrf_gpio_pin_toggle(configGPIO_LED_R);
+//        NRF_LOG_INFO("1PPS!");
+    }
 }
 
 

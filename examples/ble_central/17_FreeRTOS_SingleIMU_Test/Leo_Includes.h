@@ -43,6 +43,9 @@
 #include "nrfx_timer.h"
 #include "nrfx_gpiote.h"
 
+/* nRF驱动_SAADC */
+#include "nrfx_saadc.h"
+
 /* nRF驱动_电源管理相关 */
 //#include "nrf_pwr_mgmt.h"
 
