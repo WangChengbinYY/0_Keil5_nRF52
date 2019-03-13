@@ -62,23 +62,20 @@
 #include "nrf_drv_spi.h"
 
 /**
- * nRF应用_module模块
-*/
+ * nRF应用_module模块 */
 #include "app_error.h"
 #include "app_uart.h"
 #include "app_timer.h"
 #include "app_util.h"
 
 /**
- * nRF应用_日志输出相关
-*/
+ * nRF应用_日志输出相关 */
 #include "nrf_log.h"
 #include "nrf_log_ctrl.h"
 #include "nrf_log_default_backends.h"
 
 /**
- * FreeRTOS 系统相关
-*/                             
+ * FreeRTOS 系统相关 */                             
 #include "FreeRTOSConfig.h"
 #include "FreeRTOS.h"
 #include "task.h"
@@ -86,16 +83,24 @@
 #include "semphr.h"
 
 /**
- * FatFs 文件操作相关
-*/
+ * FatFs 文件操作相关 */
 #include "ff.h"
 #include "diskio_blkdev.h"
 #include "nrf_block_dev_sdc.h"
 
 /**
- * GPS解码相关 
-*/
+ * GPS解码相关 */
 #include "minmea.h"
+
+/**
+ * UWB 测距相关 */
+#include "deca_device_api.h"
+#include "deca_regs.h"
+#include "port_platform.h"
+
+
+
+
 
 
 //待整理
@@ -248,7 +253,7 @@
 
 /* SPI_1    SDCard  */
 /*      0 给UWB1001使用，这里用 1 */
-/*      如果要修改SDCard使用的实例，需要修改"sdk_config"里面的APP_SDCARD_SPI_INSTANCE*/
+/*      如果要修改SDCard使用的实例，需要修改"sdk_config"里面的 APP_SDCARD_SPI_INSTANCE*/
 #define configGPIO_SPI_SDCard_INSTANCE		        1                                                                         
 #define configGPIO_SPI_SDCard_CS					12				    //连接SDCard的——> SD_CS
 #define configGPIO_SPI_SDCard_SCK				    22				    //连接SDCard的——> 5管脚
@@ -269,6 +274,9 @@
 #define configGPIO_UART_GPS_TXD                      5                  //接GPS的RXD
 //#define configGPIO_UART_GPS_CTS                    5                //接GPS的CTS
 //#define configGPIO_UART_GPS_RTS                    7                //接GPS的RTS
+
+/* Uart  串口 ----------------------------------------*/
+                                               //DWM1001 的 RST
 
 
 

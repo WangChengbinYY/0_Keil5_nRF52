@@ -20,32 +20,34 @@
 #include "Leo_TIMER.h"
 #include "Leo_SDCard.h"
 #include "minmea.h"
+#include "Leo_UWB.h"
 
 
 //全局变量_时间参数 
 uint32_t    G_GPSWeekSecond;                   //GPS周内秒数据
 uint16_t    G_MicroSecond;                     //nRF52时间计数器控制的 1s的1000计数值，由外部GPS的1PPS校准 1PPS触发时 将其置0
-uint8_t	    G_GPSWeekSecond_Data[7];          //用于数据采集时，记录的当时时刻的时间
 
 //全局变量_IMU_A(U4)和IMU_B(U5)磁强计修正参数
 uint8_t	    G_MAG_Coeffi[6]; 
 
 //全局变量_IMU_A(U4)和IMU_B(U5)存放的缓存                
-uint8_t	    G_IMU_Data_A[23];                   //第一组IMU_A(U4)存放的数据
-uint8_t	    G_IMU_Data_B[23];                   //第二组IMU_A(U5)存放的数据
+uint8_t	    G_IMU_Data_A[27];                   //第一组IMU_A(U4)存放的数据
+uint8_t	    G_IMU_Data_B[27];                   //第二组IMU_A(U5)存放的数据
 uint8_t	    G_IMUDataA_Counter;                  //MPU9255中断触发的计数器	    
 uint8_t	    G_IMUDataB_Counter;
 
 //全局变量_压力传感器数据
-uint8_t     G_FOOTPresure[13];
+uint8_t     G_FOOTPresure[17];
 
 //全局变量_GPS定位数据
 uint8_t     G_GPSData[41];
 
+//全局变量_UWB测距数据
+uint8_t     G_UWBData[12];
 
 
 // 全局变量_SDCard存储缓存                                                         
-uint8_t	    G_CollectData[1024];                 //SDCard要储存数据的缓存
+uint8_t	    G_CollectData[512];                 //SDCard要储存数据的缓存
 uint16_t    G_CollectData_Counter;  
 // 全局变量_SDCard文件操作标识                                                         
 uint8_t     G_SDCard_FileIsOpen;               //标记是否已经打开文件 没打开，默认为0
@@ -68,7 +70,7 @@ extern uint8_t G_UART_Buffer2_Counter;
 
 
 /* 3级 */
-//10ms 循环的时间 采集任务                     3
+//10ms 循环的时间 采集任务                   3
 
 /* 4级 */
 #define taskPRIO_SDCard_Save                 4          //SDCard存储数据
@@ -102,41 +104,40 @@ void vINIT_Variable(void)
     //全局变量_时间参数 
     G_GPSWeekSecond     = 0;                    //GPS周内秒数据
     G_MicroSecond       = 0;                    //nRF52时间计数器控制的 1s的1000计数值，
-    //数据采集的整秒记录
-    memset(G_GPSWeekSecond_Data,0,7);
-    G_GPSWeekSecond_Data[0] = 0xA0;
-	G_GPSWeekSecond_Data[1] = 0xA0;
-    G_GPSWeekSecond_Data[6] = 0xFF;   
     
     //全局变量_IMU_A(U4)和IMU_B(U5)磁强计修正参数
     memset(G_MAG_Coeffi,0,6);
     G_MAG_Coeffi[5] = 0xFF;     
     
     //全局变量_IMU_A(U4)数据
-    memset(G_IMU_Data_A,0,23);
+    memset(G_IMU_Data_A,0,27);
     G_IMU_Data_A[0] = 0xB1;
 	G_IMU_Data_A[1] = 0xB1;
-    G_IMU_Data_A[22] = 0xFF;
-    memset(G_IMU_Data_B,0,23);
+    G_IMU_Data_A[26] = 0xFF;
+    memset(G_IMU_Data_B,0,27);
     G_IMU_Data_B[0] = 0xB2;
 	G_IMU_Data_B[1] = 0xB2;
-    G_IMU_Data_B[22] = 0xFF;
+    G_IMU_Data_B[26] = 0xFF;
     G_IMUDataA_Counter = 0;                  //IMU采集的次数计数值	    
     G_IMUDataB_Counter = 0;      
     
     //全局变量_压力传感器数据
-    memset(G_FOOTPresure,0,13);
+    memset(G_FOOTPresure,0,17);
     G_FOOTPresure[0] = 0xC1;
 	G_FOOTPresure[1] = 0xC1;
-    G_FOOTPresure[12] = 0xFF;    
+    G_FOOTPresure[16] = 0xFF;    
   
     //全局变量_GPS定位数据
     memset(G_GPSData,0,41);
-    G_FOOTPresure[0] = 0xD1;
-	G_FOOTPresure[1] = 0xD1;
-    G_FOOTPresure[40] = 0xFF;  
+    G_GPSData[0] = 0xD1;
+	G_GPSData[1] = 0xD1;
+    G_GPSData[40] = 0xFF;  
    
-    
+    //全局变量_UWB测距数据
+    memset(G_UWBData,0,12);
+    G_UWBData[0] = 0xE1;
+	G_UWBData[1] = 0xE1;
+    G_UWBData[11] = 0xFF; 
     
     
     // 全局变量_SDCard存储缓存        
@@ -181,6 +182,7 @@ static void vTask_SDCard_Close(void *pvParameters)
             nrfx_gpiote_out_set(configGPIO_LED_R);
             
             NRF_LOG_INFO("File is Closed!!!");
+            NRF_LOG_FLUSH();  
         }        
     }
 }
@@ -233,8 +235,8 @@ static void vTask_SDCard_Save(void *pvParameters)
             }
             
             tTestStart = G_MicroSecond-tTestStart;
-//            NRF_LOG_INFO("The Time of SDCard is %d ms and Number is %d!",tTestStart,tData_Count);
-//            NRF_LOG_FLUSH(); 
+            NRF_LOG_INFO("The Time of SDCard is %d ms and Number is %d!",tTestStart,tData_Count);
+            NRF_LOG_FLUSH(); 
             
         }else{
             continue;
@@ -267,8 +269,8 @@ static void vTask_GPSData_Decode(void *pvParameters)
         if(mGPS_Sentence_ID == MINMEA_SENTENCE_RMC)
         {
             //TEST
-            NRF_LOG_INFO("Find the RMC!");
-            NRF_LOG_FLUSH();
+//            NRF_LOG_INFO("Find the RMC!");
+//            NRF_LOG_FLUSH();
             struct minmea_sentence_rmc mRMC;
             if(minmea_parse_rmc(&mRMC,(char*)mData))
             {  
@@ -286,8 +288,8 @@ static void vTask_GPSData_Decode(void *pvParameters)
         if(mGPS_Sentence_ID == MINMEA_SENTENCE_GGA)
         {
             //TEST
-            NRF_LOG_INFO("Find the GGA!");
-            NRF_LOG_FLUSH();
+//            NRF_LOG_INFO("Find the GGA!");
+//            NRF_LOG_FLUSH();
             
             //GGA语句 解析成功
             struct minmea_sentence_gga mGGA;
@@ -307,29 +309,32 @@ static void vTask_GPSData_Decode(void *pvParameters)
                     memcpy(G_GPSData+36,&mGGA.hdop.scale,sizeof(mGGA.hdop.scale));
                     
                     //TEST
-                    NRF_LOG_INFO("The Lat is %d, The Lon is %d!",mGGA.latitude.value,mGGA.longitude.value);
-                    NRF_LOG_FLUSH();
+//                    NRF_LOG_INFO("The Lat is %d, The Lon is %d!",mGGA.latitude.value,mGGA.longitude.value);
+//                    NRF_LOG_FLUSH();
                     
-                    //获取 互斥量 存入数据
-                    if(xSemaphoreTake( xMutex_SDCDBuffer, ( TickType_t ) 5 ) == pdTRUE)
+                    if(G_SDCard_FileIsOpen == 1)
                     {
-                        memcpy(G_CollectData+G_CollectData_Counter,G_GPSData,sizeof(G_GPSData));
-                        G_CollectData_Counter = G_CollectData_Counter + sizeof(G_GPSData); 
-                        
-                        //释放资源
-                        xSemaphoreGive( xMutex_SDCDBuffer ); 
-            
-                        //通知 SDCard存储任务
-                        xTaskNotify(xTaskHandle_SDCard_Save,     
-                                    0,              
-                                    eNoAction);  
-                        
-                     }else
-                    {
-                        //LOEDEBUG
-                        NRF_LOG_INFO("SDCard_Buffer is Busy for GPS!!!!!!!!!!!!");
-                        NRF_LOG_FLUSH(); 
-                     }
+                        //获取 互斥量 存入数据
+                        if(xSemaphoreTake( xMutex_SDCDBuffer, ( TickType_t ) 5 ) == pdTRUE)
+                        {
+                            memcpy(G_CollectData+G_CollectData_Counter,G_GPSData,sizeof(G_GPSData));
+                            G_CollectData_Counter = G_CollectData_Counter + sizeof(G_GPSData); 
+                            
+                            //释放资源
+                            xSemaphoreGive( xMutex_SDCDBuffer ); 
+                
+                            //通知 SDCard存储任务
+                            xTaskNotify(xTaskHandle_SDCard_Save,     
+                                        0,              
+                                        eNoAction);  
+                            
+                         }else
+                        {
+                            //LOEDEBUG
+                            NRF_LOG_INFO("SDCard_Buffer is Busy for GPS!!!!!!!!!!!!");
+                            NRF_LOG_FLUSH(); 
+                         }
+                    }
                 }
                 
             }
@@ -351,34 +356,33 @@ static void vTimer_CollectData(xTimerHandle pxTimer)
     {
         uint16_t    tTestStart = 0;   
         tTestStart = G_MicroSecond;
-        
+        uint8_t error_code_Foot = 0;
+        uint8_t error_code_UWB = 0;
+        uint16_t tDistance = 0;
+        uint8_t  tNumber = 0;
 //1. 采集IMU数据        
-        //(1)记录整秒数据
-        memcpy(G_GPSWeekSecond_Data+2,&G_GPSWeekSecond,sizeof(G_GPSWeekSecond));       
+        //(1)记录时间数据
+        memcpy(G_IMU_Data_A+2,&G_GPSWeekSecond,sizeof(G_GPSWeekSecond)); 
+        memcpy(G_IMU_Data_A+6,&G_MicroSecond,sizeof(G_MicroSecond));       
         
         //(2)采集IMU_A 的数据
-        //记录 ms 数据
-        memcpy(G_IMU_Data_A+2,&G_MicroSecond,sizeof(G_MicroSecond));
         //选择IMU_A nCS管脚
         nrfx_gpiote_out_clear(configGPIO_SPI_IMUA_nCS); 
         nrf_delay_us(1); 
         //采集IMU_A 的数据
-        Leo_MPU9255_Read_ACC(G_IMU_Data_A+4);
-        Leo_MPU9255_Read_Gyro(G_IMU_Data_A+10);
-        Leo_MPU9255_Read_Magnetic(G_IMU_Data_A+16);
+        Leo_MPU9255_Read_ACC(G_IMU_Data_A+8);
+        Leo_MPU9255_Read_Gyro(G_IMU_Data_A+14);
+        Leo_MPU9255_Read_Magnetic(G_IMU_Data_A+20);
         //关闭IMU_A nCS管脚
         nrfx_gpiote_out_set(configGPIO_SPI_IMUA_nCS);   
         
 
 //2. 采集压力传感器数据
-        //(1)记录 ms 数据
-        memcpy(G_FOOTPresure+2,&G_MicroSecond,sizeof(G_MicroSecond));   
-        //(2)采集 AD 数据
-        uint8_t error_code_Foot = 0;
+        //(1)记录时间数据
+        memcpy(G_FOOTPresure+2,&G_GPSWeekSecond,sizeof(G_GPSWeekSecond)); 
+        memcpy(G_FOOTPresure+6,&G_MicroSecond,sizeof(G_MicroSecond));   
+        //(2)采集 AD 数据        
         nrf_saadc_value_t tSAResult[4] = {0}; 
-//        float sVoltResult[4] = {0.0};
-//        nrf_saadc_value_t tTest[4] = {0};
-//        uint8_t i = 0;
         //采集 AD 通道的数据
         error_code_Foot |= nrfx_saadc_sample_convert(0,tSAResult);
         error_code_Foot |= nrfx_saadc_sample_convert(1,tSAResult+1);        
@@ -386,7 +390,7 @@ static void vTimer_CollectData(xTimerHandle pxTimer)
         error_code_Foot |= nrfx_saadc_sample_convert(3,tSAResult+3);    
         if(error_code_Foot == 0)
         {
-            memcpy(G_FOOTPresure+4,tSAResult,sizeof(tSAResult));
+            memcpy(G_FOOTPresure+8,tSAResult,sizeof(tSAResult));
         }
         
         //转换
@@ -399,19 +403,26 @@ static void vTimer_CollectData(xTimerHandle pxTimer)
 //        NRF_LOG_FLUSH(); 
         
 //3. 采集 UWB测距 数据       
-        
-        
-        
-        
-        
-        
-        
-        /*(5) 都采集完了,整体存储 等待2ms，如果还没有释放，则放弃此次存储*/
+        error_code_UWB = ucSS_INIT_RUN(&tDistance,&tNumber);
+//        NRF_LOG_INFO("The UWB  %d!",error_code_UWB);
+//        NRF_LOG_FLUSH(); 
+        if(error_code_UWB == 0)
+        {
+            //记录时间数据
+            memcpy(G_UWBData+2,&G_GPSWeekSecond,sizeof(G_GPSWeekSecond));
+            memcpy(G_UWBData+6,&G_MicroSecond,sizeof(G_MicroSecond));
+            //记录测量 的次数序号
+            memcpy(G_UWBData+8,&tNumber,sizeof(tNumber));
+            //记录测量 的距离数据
+            memcpy(G_UWBData+9,&tDistance,sizeof(tDistance));
+//            NRF_LOG_INFO("The %d of Distance is %d mm!",tNumber,tDistance);
+//            NRF_LOG_FLUSH(); 
+        }
+
+//4. 采集数据进行存储        
+        /*都采集完了,整体存储 等待2ms，如果还没有释放，则放弃此次存储*/
         if(xSemaphoreTake( xMutex_SDCDBuffer, ( TickType_t ) 2 ) == pdTRUE)
         {
-            //整秒数据 存入缓存
-            memcpy(G_CollectData+G_CollectData_Counter,G_GPSWeekSecond_Data,sizeof(G_GPSWeekSecond_Data));
-            G_CollectData_Counter = G_CollectData_Counter + sizeof(G_GPSWeekSecond_Data); 
             //IMU_A数据 存入缓存
             memcpy(G_CollectData+G_CollectData_Counter,G_IMU_Data_A,sizeof(G_IMU_Data_A));
             G_CollectData_Counter = G_CollectData_Counter + sizeof(G_IMU_Data_A);
@@ -421,7 +432,13 @@ static void vTimer_CollectData(xTimerHandle pxTimer)
                 memcpy(G_CollectData+G_CollectData_Counter,G_FOOTPresure,sizeof(G_FOOTPresure));
                 G_CollectData_Counter = G_CollectData_Counter + sizeof(G_FOOTPresure);
             }
-       
+            //UWB测距数据存入缓存
+            if(error_code_UWB == 0)
+            {
+                memcpy(G_CollectData+G_CollectData_Counter,G_UWBData,sizeof(G_UWBData));
+                G_CollectData_Counter = G_CollectData_Counter + sizeof(G_UWBData);                
+            }         
+            
             //释放资源
             xSemaphoreGive( xMutex_SDCDBuffer ); 
             
@@ -440,7 +457,7 @@ static void vTimer_CollectData(xTimerHandle pxTimer)
         
         
         tTestStart = G_MicroSecond-tTestStart;
-//        NRF_LOG_INFO("The Time of uesed is %d ms!",tTestStart);
+//        NRF_LOG_INFO("             The Time of uesed is %d ms!",tTestStart);
 //        NRF_LOG_FLUSH(); 
     }
 }
@@ -505,7 +522,7 @@ uint8_t vTask_CreatTask(void)
     }       
     
     
-    //(4) 建立采集任务 5ms定时器 
+    //(4) 建立采集任务 10ms定时器 
     xTimerHandle_CollectData = xTimerCreate("5ms",
                                             xTimer,
                                             pdTRUE,

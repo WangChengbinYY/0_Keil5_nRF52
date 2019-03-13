@@ -120,15 +120,15 @@ int main(void)
 //7. 初始化 SAADC 压力传感器
     error_code |= ucSAADCInitial();
     NRF_LOG_INFO(("||Initialize||-->SAADC----------->error  0x%x"),error_code); 
-    NRF_LOG_FLUSH(); 
-    
-    
+    NRF_LOG_FLUSH();   
 
-//7. 初始化 UWB
-    
+//8. 初始化 UWB
+    error_code |= ucSS_INIT_Initial();
+    NRF_LOG_INFO(("||Initialize||-->UWB------------->error  0x%x"),error_code); 
+    NRF_LOG_FLUSH();     
 
 
-//8. 启动中断和定时器
+//9. 启动中断和定时器
     //(1)计时器启动
     error_code |= ucTimerStart_3();      /* TIMER3 计数器初始化*/ 
     error_code |= ucTimerStart_4();   
@@ -136,12 +136,12 @@ int main(void)
     ucINTStart_SDCard();
     ucINTStart_PPS();
 
-//9. 建立任务       
+//10. 建立任务       
     error_code |= vTask_CreatTask();
     NRF_LOG_INFO(("||Initialize||-->Task_Creat---->error  0x%x"),error_code);
     NRF_LOG_FLUSH(); 
     
-//10.判断初始化结果，不正确，则红灯循环闪烁，否则常亮
+//11.判断初始化结果，不正确，则红灯循环闪烁，否则常亮
     if(error_code != 0)
     {
         NRF_LOG_INFO(("||Initialize||-->Initializaiton is Wrong!!->error  0x%x"),error_code);
@@ -157,10 +157,10 @@ int main(void)
         nrfx_gpiote_out_clear(configGPIO_LED_R); 
     }
 
-//11. 启动_FreeRTOS 任务循环执行  
+//12. 启动_FreeRTOS 任务循环执行  
     vTaskStartScheduler();
     
-//12. 任务循环出错  */
+//13. 任务循环出错  */
     NRF_LOG_INFO("||Wrong    ||-->FreeRTOS-->Quite !!");
     NRF_LOG_FLUSH();
     for (;;)

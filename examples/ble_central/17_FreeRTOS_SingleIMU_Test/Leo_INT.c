@@ -34,23 +34,6 @@ extern TaskHandle_t xTaskHandle_SDCard_Close;         /*SDCard ¹Ø±ÕÎÄ¼þÈÎÎñ  ¾ä±
 
 
 
-
-
-
-
-
-//extern uint32_t	        G_MPU9255_Counter; 
-
-
-
-//extern TaskHandle_t     xTaskHandle_MPU9255_RxData;
-//extern TaskHandle_t     xTaskHandle_DataSave_Start;         /*¿ªÊ¼´æ´¢Êý¾Ý           ¾ä±ú */
-//extern TaskHandle_t     xTaskHandle_DataSave_End;
-
-
-
-
-
 /*
 *********************************************************************************************************
 *                                       SDCard ´æ´¢ÔÝÍ£ Íâ²¿ÖÐ¶Ï
@@ -66,41 +49,41 @@ static void vINTHandler_SDCard(nrfx_gpiote_pin_t pin, nrf_gpiote_polarity_t acti
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
     if(nrf_gpio_pin_read(configGPIO_INT_SDCard) == 0)
     {
-        //²âÊÔÓÃ
-        nrfx_gpiote_out_toggle(configGPIO_LED_R);
-        
-        if(G_SDCard_FileIsOpen == 1)
+        nrf_delay_ms(200);
+        if(nrf_gpio_pin_read(configGPIO_INT_SDCard) == 0)
         {
-            //±êÖ¾Î» ÇåÁã
-            G_SDCard_FileIsOpen = 0;
+            if(G_SDCard_FileIsOpen == 1)
+            {
+                //±êÖ¾Î» ÇåÁã
+                G_SDCard_FileIsOpen = 0;
+                
+                //Í¨Öª ¹Ø±ÕÎÄ¼þ²Ù×÷ÈÎÎñ
+                xTaskNotifyFromISR(xTaskHandle_SDCard_Close,    
+                                    0,           
+                                    eNoAction,
+                                    &xHigherPriorityTaskWoken);            
+                portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+            }
             
-            //Í¨Öª ¹Ø±ÕÎÄ¼þ²Ù×÷ÈÎÎñ
-            xTaskNotifyFromISR(xTaskHandle_SDCard_Close,    
-                                0,           
-                                eNoAction,
-                                &xHigherPriorityTaskWoken);            
-            portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
-        }
-        
 
-        //ÈÎÎñ·ÖÎö
-//        NRF_LOG_INFO("TEST:   SDCard INT is ok!");
-//        NRF_LOG_FLUSH();
-//        
-//        uint8_t pcWriteBuffer[300];
-//        NRF_LOG_INFO("=================================================");
-//        NRF_LOG_INFO("\nname      namestate  priority   rest   number");
-//        vTaskList((char *)&pcWriteBuffer);
-//        NRF_LOG_INFO("\n%s",pcWriteBuffer);
-//        NRF_LOG_FLUSH();
-//        
-//        NRF_LOG_INFO("=================================================");
-//        NRF_LOG_INFO("\nname       counter         reate");
-//        vTaskGetRunTimeStats((char *)&pcWriteBuffer);
-//        NRF_LOG_RAW_INFO("\n%s",pcWriteBuffer);
-//        NRF_LOG_FLUSH();  
-        
-        
+            //ÈÎÎñ·ÖÎö
+            NRF_LOG_INFO("TEST:   SDCard INT is ok!");
+            NRF_LOG_FLUSH();
+            
+            uint8_t pcWriteBuffer[300];
+            NRF_LOG_INFO("=================================================");
+            NRF_LOG_INFO("\nname      namestate  priority   rest   number");
+            vTaskList((char *)&pcWriteBuffer);
+            NRF_LOG_INFO("\n%s",pcWriteBuffer);
+            NRF_LOG_FLUSH();
+            
+            NRF_LOG_INFO("=================================================");
+            NRF_LOG_INFO("\nname       counter         reate");
+            vTaskGetRunTimeStats((char *)&pcWriteBuffer);
+            NRF_LOG_RAW_INFO("\n%s",pcWriteBuffer);
+            NRF_LOG_FLUSH();             
+            
+        }        
     }   
 
     
