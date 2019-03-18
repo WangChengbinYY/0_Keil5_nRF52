@@ -269,7 +269,7 @@ static void on_srv_disc_completion(ble_db_discovery_t * p_db_discovery,
         // discovery is about to start.
         p_srv_being_discovered->char_count = 0;
 
-        NRF_LOG_DEBUG("Leo Completion  Starting discovery of service with UUID 0x%x on connection handle 0x%x.",
+        NRF_LOG_DEBUG("WangCb Completion  Starting discovery of service with UUID 0x%x on connection handle 0x%x.",
                       p_srv_being_discovered->srv_uuid.uuid, conn_handle);
 
         uint32_t err_code;
@@ -885,7 +885,7 @@ static uint32_t discovery_start(ble_db_discovery_t * const p_db_discovery, uint1
     p_srv_being_discovered = &(p_db_discovery->services[p_db_discovery->curr_srv_ind]);
     p_srv_being_discovered->srv_uuid = m_registered_handlers[p_db_discovery->curr_srv_ind];
 
-    NRF_LOG_DEBUG("Starting discovery of service with UUID 0x%x  Leo Type is 0x%x on connection handle 0x%x.",
+    NRF_LOG_DEBUG("Starting discovery of service with UUID 0x%x  WangCb Type is 0x%x on connection handle 0x%x.",
                   p_srv_being_discovered->srv_uuid.uuid,p_srv_being_discovered->srv_uuid.type, conn_handle);
 
 	

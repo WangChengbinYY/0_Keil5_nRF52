@@ -64,18 +64,18 @@ void ble_nus_c_on_db_disc_evt(ble_nus_c_t * p_ble_nus_c, ble_db_discovery_evt_t 
         &&  (p_evt->params.discovered_db.srv_uuid.uuid == BLE_UUID_NUS_SERVICE)
         &&  (p_evt->params.discovered_db.srv_uuid.type == p_ble_nus_c->uuid_type))
     {
-			NRF_LOG_INFO("Leo have found BLE_UUID_NUS_SERVICE 0x1");
+			NRF_LOG_INFO("WangCb have found BLE_UUID_NUS_SERVICE 0x1");
         for (uint32_t i = 0; i < p_evt->params.discovered_db.char_count; i++)
         {
             switch (p_chars[i].characteristic.uuid.uuid)
             {
                 case BLE_UUID_NUS_RX_CHARACTERISTIC:
-									NRF_LOG_INFO("Leo have found BLE_UUID_NUS_RX_CHARACTERISTIC 0x2");
+									NRF_LOG_INFO("WangCb have found BLE_UUID_NUS_RX_CHARACTERISTIC 0x2");
                     nus_c_evt.handles.nus_rx_handle = p_chars[i].characteristic.handle_value;
                     break;
 
                 case BLE_UUID_NUS_TX_CHARACTERISTIC:
-									NRF_LOG_INFO("Leo have found BLE_UUID_NUS_TX_CHARACTERISTIC 0x3");
+									NRF_LOG_INFO("WangCb have found BLE_UUID_NUS_TX_CHARACTERISTIC 0x3");
                     nus_c_evt.handles.nus_tx_handle = p_chars[i].characteristic.handle_value;
                     nus_c_evt.handles.nus_tx_cccd_handle = p_chars[i].cccd_handle;
                     break;

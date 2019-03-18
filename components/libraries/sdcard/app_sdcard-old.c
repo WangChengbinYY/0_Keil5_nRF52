@@ -1,30 +1,30 @@
 /**
  * Copyright (c) 2016 - 2018, Nordic Semiconductor ASA
- *
+ * 
  * All rights reserved.
- *
+ * 
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
- *
+ * 
  * 1. Redistributions of source code must retain the above copyright notice, this
  *    list of conditions and the following disclaimer.
- *
+ * 
  * 2. Redistributions in binary form, except as embedded into a Nordic
  *    Semiconductor ASA integrated circuit in a product or a software update for
  *    such product, must reproduce the above copyright notice, this list of
  *    conditions and the following disclaimer in the documentation and/or other
  *    materials provided with the distribution.
- *
+ * 
  * 3. Neither the name of Nordic Semiconductor ASA nor the names of its
  *    contributors may be used to endorse or promote products derived from this
  *    software without specific prior written permission.
- *
+ * 
  * 4. This software, with or without modification, must only be used with a
  *    Nordic Semiconductor ASA integrated circuit.
- *
+ * 
  * 5. Any software provided in binary form under this license must not be reverse
  *    engineered, decompiled, modified and/or disassembled.
- *
+ * 
  * THIS SOFTWARE IS PROVIDED BY NORDIC SEMICONDUCTOR ASA "AS IS" AND ANY EXPRESS
  * OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
  * OF MERCHANTABILITY, NONINFRINGEMENT, AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -35,14 +35,14 @@
  * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
+ * 
  */
 #include "sdk_config.h"
 #if APP_SDCARD_ENABLED
 
 #include "app_sdcard.h"
 #include "nrf_gpio.h"
-#include "nrfx_spim.h"
+#include "nrf_drv_spi.h"
 #include "app_error.h"
 #include "nrf_assert.h"
 
@@ -145,7 +145,7 @@
                                      } while (0);
 
 
-static const nrfx_spim_t m_spi = NRFX_SPIM_INSTANCE(APP_SDCARD_SPI_INSTANCE);  /**< SPI instance. */
+static const nrf_drv_spi_t m_spi = NRF_DRV_SPI_INSTANCE(APP_SDCARD_SPI_INSTANCE);  /**< SPI instance. */
 
 /**
  * @brief SDC response type.
@@ -235,13 +235,8 @@ __STATIC_INLINE void sdc_spi_transfer(uint8_t const * const p_txb,
                                       uint8_t * const p_rxb,
                                       uint8_t rx_len)
 {
-    static nrfx_spim_xfer_desc_t p_xfer_desc;
-    p_xfer_desc.p_tx_buffer = p_txb;
-    p_xfer_desc.tx_length = tx_len;
-    p_xfer_desc.p_rx_buffer = p_rxb;
-    p_xfer_desc.rx_length = rx_len;
     SDC_CS_ASSERT();
-    ret_code_t err_code = nrfx_spim_xfer(&m_spi, &p_xfer_desc, NULL);
+    ret_code_t err_code = nrf_drv_spi_transfer(&m_spi, p_txb, tx_len, p_rxb, rx_len);
     APP_ERROR_CHECK(err_code);
 }
 
@@ -251,8 +246,13 @@ __STATIC_INLINE void sdc_spi_transfer(uint8_t const * const p_txb,
  */
 __STATIC_INLINE void sdc_spi_hispeed(void)
 {
-    nrf_spim_frequency_set(m_spi.p_reg,
-                           (nrf_spim_frequency_t) APP_SDCARD_FREQ_DATA);
+#ifdef SPI_PRESENT
+    nrf_spi_frequency_set(m_spi.u.spi.p_reg,
+                          (nrf_spi_frequency_t) APP_SDCARD_FREQ_DATA);
+#else
+    nrf_spim_frequency_set(m_spi.u.spim.p_reg,
+                           (nrf_spi_frequency_t) APP_SDCARD_FREQ_DATA);
+#endif
 }
 
 
@@ -837,11 +837,11 @@ static PT_THREAD(sdc_pt_write(uint8_t * rx_data,
  *
  * @param[in] p_event       Pointer to the SPI event structure.
  */
-static void spi_handler(nrfx_spim_evt_t const * p_event,
+static void spi_handler(nrf_drv_spi_evt_t const * p_event,
                         void *                    p_context)
 {
-    uint8_t * rx_data = p_event->xfer_desc.p_rx_buffer;
-    uint8_t rx_length = p_event->xfer_desc.rx_length;
+    uint8_t * rx_data = p_event->data.done.p_rx_buffer;
+    uint8_t rx_length = p_event->data.done.rx_length;
 
     if (!m_cb.state.rw_op.blocks_left)
     {
@@ -856,7 +856,7 @@ static void spi_handler(nrfx_spim_evt_t const * p_event,
         rx_length -= SDC_COMMAND_LEN;
         rx_data   += SDC_COMMAND_LEN;
 
-        if (p_event->xfer_desc.p_tx_buffer[0] == CMD12)
+        if (p_event->data.done.p_tx_buffer[0] == CMD12)
         {
             // Ignore the first byte if CMD12 was sent.
             if (rx_length)
@@ -873,7 +873,7 @@ static void spi_handler(nrfx_spim_evt_t const * p_event,
         }
         if (rx_length == 0)
         {
-            if (p_event->xfer_desc.p_tx_buffer[0] == CMD12)
+            if (p_event->data.done.p_tx_buffer[0] == CMD12)
             {
                 // Ignore invalid reply on CMD12.
                 ++rx_length;
@@ -1093,10 +1093,10 @@ ret_code_t app_sdc_init(app_sdc_config_t const * const p_config, sdc_event_handl
         return NRF_ERROR_INVALID_STATE;
     }
     if ((!event_handler)
-        || (p_config->cs_pin == NRFX_SPIM_PIN_NOT_USED)
-        || (p_config->miso_pin == NRFX_SPIM_PIN_NOT_USED)
-        || (p_config->mosi_pin == NRFX_SPIM_PIN_NOT_USED)
-        || (p_config->sck_pin == NRFX_SPIM_PIN_NOT_USED))
+        || (p_config->cs_pin == NRF_DRV_SPI_PIN_NOT_USED)
+        || (p_config->miso_pin == NRF_DRV_SPI_PIN_NOT_USED)
+        || (p_config->mosi_pin == NRF_DRV_SPI_PIN_NOT_USED)
+        || (p_config->sck_pin == NRF_DRV_SPI_PIN_NOT_USED))
     {
         return NRF_ERROR_INVALID_PARAM;
     }
@@ -1110,18 +1110,18 @@ ret_code_t app_sdc_init(app_sdc_config_t const * const p_config, sdc_event_handl
     nrf_gpio_cfg_output(m_cb.cs_pin);
     SDC_CS_DEASSERT();
 
-    const nrfx_spim_config_t spi_cfg = {
+    const nrf_drv_spi_config_t spi_cfg = {
                             .sck_pin      = p_config->sck_pin,
                             .mosi_pin     = p_config->mosi_pin,
                             .miso_pin     = p_config->miso_pin,
-                            .ss_pin       = NRFX_SPIM_PIN_NOT_USED,
-                            .irq_priority = NRFX_SPIM_DEFAULT_CONFIG_IRQ_PRIORITY,
+                            .ss_pin       = NRF_DRV_SPI_PIN_NOT_USED,
+                            .irq_priority = SPI_DEFAULT_CONFIG_IRQ_PRIORITY,
                             .orc          = 0xFF,
-                            .frequency    = (nrf_spim_frequency_t) APP_SDCARD_FREQ_INIT,
-                            .mode         = NRF_SPIM_MODE_0,
-                            .bit_order    = NRF_SPIM_BIT_ORDER_MSB_FIRST,
+                            .frequency    = (nrf_drv_spi_frequency_t) APP_SDCARD_FREQ_INIT,
+                            .mode         = NRF_DRV_SPI_MODE_0,
+                            .bit_order    = NRF_DRV_SPI_BIT_ORDER_MSB_FIRST,
                         };
-    err_code = nrfx_spim_init(&m_spi, &spi_cfg, spi_handler, NULL);
+    err_code = nrf_drv_spi_init(&m_spi, &spi_cfg, spi_handler, NULL);
     APP_ERROR_CHECK(err_code);
 
     m_cb.handler            = event_handler;
@@ -1132,12 +1132,8 @@ ret_code_t app_sdc_init(app_sdc_config_t const * const p_config, sdc_event_handl
 
     // Send 80 clocks with CS inactive to switch into SPI mode.
     m_cb.cmd_buf[0] = 0xFF;
-    static nrfx_spim_xfer_desc_t p_xfer_desc;
-    p_xfer_desc.p_tx_buffer = m_cb.cmd_buf;
-    p_xfer_desc.tx_length = 1;
-    p_xfer_desc.p_rx_buffer = m_cb.rsp_buf;
-    p_xfer_desc.rx_length = 10;
-    err_code = nrfx_spim_xfer(&m_spi, &p_xfer_desc, NULL);
+    err_code = nrf_drv_spi_transfer(&m_spi, m_cb.cmd_buf, 1,
+                                            m_cb.rsp_buf, 10);
     APP_ERROR_CHECK(err_code);
 
     return NRF_SUCCESS;
@@ -1155,7 +1151,7 @@ ret_code_t app_sdc_uninit(void)
         return NRF_ERROR_BUSY;
     }
 
-    nrfx_spim_uninit(&m_spi);
+    nrf_drv_spi_uninit(&m_spi);
     nrf_gpio_cfg_input(m_cb.cs_pin, NRF_GPIO_PIN_NOPULL);
 
     m_cb.state.bus_state = SDC_BUS_IDLE;

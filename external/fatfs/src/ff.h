@@ -24,7 +24,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
+    
 #include "integer.h"	/* Basic integer types */
 #include "ffconf.h"		/* FatFs configuration options */
 
