@@ -159,7 +159,7 @@ uint8_t ucSDCard_SaveData(uint8_t* mbuffer,UINT mLength)
     FRESULT ff_result = 0;
     UINT mWritenByteNum = 0; 
     ff_result |= f_write(&file,mbuffer,mLength,&mWritenByteNum);
-//ff_result |= f_sync(&file);
+//    ff_result |= f_sync(&file);
     return ff_result;
 }
 

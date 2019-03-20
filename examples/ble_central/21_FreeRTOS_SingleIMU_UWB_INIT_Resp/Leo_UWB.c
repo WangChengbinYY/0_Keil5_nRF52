@@ -16,8 +16,8 @@
 
 #include "Leo_UWB.h"
 
-
-   
+extern uint8_t			G_UWBData_IsReady;
+extern uint8_t			G_UWBData_IsComing;
     
 /*=============================== 通用设定 ===================================*/
 /* Length of the common part of the message (up to and including the function code, see NOTE 1 below). */
@@ -271,6 +271,145 @@ uint8_t ucSS_INIT_Handler(uint16* pDistance,uint8_t* pNumber)
 }
 
 
+
+/**
+ * 发起者  启动测距   */
+uint8_t ucSS_INIT_RUN(uint16* pDistance,uint8_t* pNumber)
+{
+    uint32 status_reg = 0;
+    uint32 tMask = 0;
+    uint8_t error_code = 0;
+    
+    //1.发送准备
+    //(1)写入发送序号 256循环
+    INIT_tx_poll_msg[ALL_MSG_SN_IDX] = INIT_frame_seq_nb;
+    //(2)写入所要发送的数据
+    dwt_write32bitreg(SYS_STATUS_ID, SYS_STATUS_TXFRS);
+    dwt_writetxdata(sizeof(INIT_tx_poll_msg), INIT_tx_poll_msg, 0); /* Zero offset in TX buffer. */
+    dwt_writetxfctrl(sizeof(INIT_tx_poll_msg), 0, 1); /* Zero offset in TX buffer, ranging. */  
+    
+    //2.开始发送 发送之后即可转入 待接收状态 延迟由dwt_setrxaftertxdelay()设定，此处不设定，不延迟等待
+    /* Start transmission, indicating that a response is expected so that reception is enabled automatically after the frame is sent and the delay
+     * set by dwt_setrxaftertxdelay() has elapsed. */
+    dwt_starttx(DWT_START_TX_IMMEDIATE | DWT_RESPONSE_EXPECTED); 
+
+//        NRF_LOG_INFO(("SYS_STATUS_ID  is  0x%x"),status_reg); 
+//    NRF_LOG_FLUSH(); 
+    
+//3.发送后，等待反馈
+    /* We assume that the transmission is achieved correctly, poll for reception of a frame or error/timeout. See NOTE 4 below. */
+    //SYS_STATUS_RXFCG 接收成功；SYS_STATUS_ALL_RX_TO 接收超时；SYS_STATUS_ALL_RX_ERR 接收错误
+    while(!G_UWBData_IsComing)
+    {
+        vTaskDelay(1);
+    }
+    G_UWBData_IsComing = 0;
+    status_reg = dwt_read32bitreg(SYS_STATUS_ID);
+//    while (!((status_reg = dwt_read32bitreg(SYS_STATUS_ID)) & (SYS_STATUS_RXFCG | SYS_STATUS_ALL_RX_TO | SYS_STATUS_ALL_RX_ERR)))
+//    {};    
+    
+  
+        
+        
+//    #if 1  // include if required to help debug timeouts.
+//    int temp = 0;		
+//    if(status_reg & SYS_STATUS_RXFCG )
+//    temp =1;
+//    else if(status_reg & SYS_STATUS_ALL_RX_TO )
+//    temp =2;
+//    if(status_reg & SYS_STATUS_ALL_RX_ERR )
+//    temp =3;
+//    #endif
+        
+//    NRF_LOG_INFO(("SYS_STATUS_ID  is  0x%x"),status_reg); 
+// 
+//    tMask = dwt_read32bitreg(SYS_MASK_ID);
+//    NRF_LOG_INFO("Mask is  0x%x",tMask);
+//    NRF_LOG_INFO("Mask and Status is  0x%x",status_reg&tMask);
+//    NRF_LOG_FLUSH();    
+    
+//4.收到反馈     
+    //(1)接收成功      
+    if (status_reg & SYS_STATUS_RXFCG)
+    {		
+        uint32_t frame_len;  
+        
+        //清楚成功接收 事件标志位，以防下一个循环误判
+        // It can also be cleared explicitly by writing a 1 to it.
+        dwt_write32bitreg(SYS_STATUS_ID, SYS_STATUS_RXFCG);
+        
+
+        /* A frame has been received, read it into the local buffer. */
+        //读取寄存器，获取接收到数据的长度
+        frame_len = dwt_read32bitreg(RX_FINFO_ID) & RX_FINFO_RXFLEN_MASK;
+        //将接收到的数据，存入缓存内        
+        if (frame_len <= INIT_RX_BUF_LEN)
+        {
+          dwt_readrxdata(INIT_rx_buffer, frame_len, 0);
+        }else
+        {
+            //return 1;
+        }
+
+
+        //这里有个问题，只有一对可以，如果有多对，相互干扰，如果成功接收到别的发送者的信号，怎么处理？？？？？
+        /* Check that the frame is the expected response from the companion "SS TWR responder" example.
+        * As the sequence number field of the frame is not relevant, it is cleared to simplify the validation of the frame. */
+        //将接收到的 信息中的 数据包序号 保存下来
+        *pNumber = INIT_rx_buffer[ALL_MSG_SN_IDX];
+        //将数据包序号置0 和原始数据包对比，以确定是自己想要的数据包
+        INIT_rx_buffer[ALL_MSG_SN_IDX] = 0;
+        if (memcmp(INIT_rx_buffer, INIT_rx_resp_msg, ALL_MSG_COMMON_LEN) == 0)
+        {	           
+            uint32_t poll_tx_ts, resp_rx_ts, resp_tx_ts, poll_rx_ts;
+            int32_t  rtd_init, rtd_resp;
+            double tof;
+            float clockOffsetRatio ;
+            uint16_t tDistance = 0;
+            /* Retrieve poll transmission and response reception timestamps. See NOTE 5 below. */
+            poll_tx_ts = dwt_readtxtimestamplo32();
+            resp_rx_ts = dwt_readrxtimestamplo32();
+
+            /* Read carrier integrator value and calculate clock offset ratio. See NOTE 7 below. */
+            clockOffsetRatio = dwt_readcarrierintegrator() * (FREQ_OFFSET_MULTIPLIER * HERTZ_TO_PPM_MULTIPLIER_CHAN_5 / 1.0e6) ;
+
+            /* Get timestamps embedded in response message. */
+            vSS_INIT_resp_msg_get_ts(&INIT_rx_buffer[RESP_MSG_POLL_RX_TS_IDX], &poll_rx_ts);
+            vSS_INIT_resp_msg_get_ts(&INIT_rx_buffer[RESP_MSG_RESP_TX_TS_IDX], &resp_tx_ts);
+
+            /* Compute time of flight and distance, using clock offset ratio to correct for differing local and remote clock rates */
+            rtd_init = resp_rx_ts - poll_tx_ts;
+            rtd_resp = resp_tx_ts - poll_rx_ts;
+
+            tof = ((rtd_init - rtd_resp * (1.0f - clockOffsetRatio)) / 2.0f) * DWT_TIME_UNITS; // Specifying 1.0f and 2.0f are floats to clear warning 
+            *pDistance = (uint16_t)(tof * SPEED_OF_LIGHT*1000.0);
+            
+            INIT_frame_seq_nb++;
+            
+            G_UWBData_IsReady = 1;
+            
+            return 0;
+            
+        }
+    }
+    else
+    {
+//        NRF_LOG_INFO("UWB RX is TimeOut!");
+//        NRF_LOG_FLUSH();
+        
+        /* Clear RX error/timeout events in the DW1000 status register. */
+        dwt_write32bitreg(SYS_STATUS_ID, SYS_STATUS_ALL_RX_TO | SYS_STATUS_ALL_RX_ERR);
+
+        /* Reset RX to properly reinitialise LDE operation. */
+        //dwt_rxreset();
+        
+        G_UWBData_IsReady = 1;
+        INIT_frame_seq_nb++;
+        //return 1;
+    }
+    //return temp;
+    return 1;
+}
 /*****************************************************************************************************************************************************
 * INIT NOTES:
 *

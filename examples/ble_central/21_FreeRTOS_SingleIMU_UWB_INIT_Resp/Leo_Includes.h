@@ -46,6 +46,9 @@
 /* nRF驱动_SAADC */
 #include "nrfx_saadc.h"
 
+/* nRF驱动_Uart */
+//#include "nrfx_uart.h"
+
 /* nRF驱动_电源管理相关 */
 //#include "nrf_pwr_mgmt.h"
 
@@ -109,8 +112,8 @@
 /*------------------------- 寄存器相关 -------------------------*/
 #define configRegister_MPU_SPIReadBit 		        0x80		        //SPI读取数据时，对地址添加 (目前在MPU9255中使用)
 /* SDCard 存储buffer相关 */
-#define configBuffer_SDCard_Max                     2048
-#define configBuffer_SDCard_Save                    1024
+#define configBuffer_SDCard_Max                     1024
+#define configBuffer_SDCard_Save                    512
 
 
 

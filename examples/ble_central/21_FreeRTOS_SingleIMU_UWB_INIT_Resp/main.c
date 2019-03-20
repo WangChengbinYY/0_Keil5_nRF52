@@ -63,35 +63,9 @@ int main(void)
     NRF_LOG_INFO(("||Initialize||-->LOG----------->error  0x%x"),error_code);
 
 //--------测试专用-----------------------  
-//    uint16_t tDistance = 100;
-//    uint8_t  tNumber = 5;
-//    uint32 tMask = 0;
-//    
-//    error_code |= nrfx_gpiote_init();  
-//    
-//    error_code |= ucINTInital_UWB();
-//    ucINTStart_UWB();
-//    NRF_LOG_INFO(("||Initialize||-->INT_UWB------->error  0x%x"),error_code);
-//    
-//    error_code |= ucSS_INIT_Initial();
-//    NRF_LOG_INFO(("||Initialize||-->UWB------------->error  0x%x"),error_code); 
-//    NRF_LOG_FLUSH(); 
-//   
-//   
-//    
-//    while(1)
-//    {
-////        NRF_LOG_INFO("UWB     Start !!! %d",error_code); 
-////        NRF_LOG_FLUSH(); 
-//        
-////            tMask = dwt_read32bitreg(GPIO_CTRL_ID);
-////        NRF_LOG_INFO("GPIO mode is  0x%x",tMask);
-//        nrf_delay_ms(300);
-//        error_code |= ucSS_INIT_RUN(&tDistance,&tNumber);
-//    }
-    
-//---------------------------------------     
-    
+
+//---------------------------------------   
+   
 //1. 全局变量初始化
     vINIT_Variable();        
     
@@ -109,8 +83,11 @@ int main(void)
     NRF_LOG_INFO(("||Initialize||-->INT----------->error  0x%x"),error_code);     
 
 
+
+
 //3. 计时器初始化 
     /* (1) 1ms 计时器 初始化 使用的TIMR3 */   
+    error_code |= ucTimerInitial_2();
     error_code |= ucTimerInitial_3();      /* TIMER3 计数器初始化*/ 
     error_code |= ucTimerInitial_4();
     NRF_LOG_INFO(("||Initialize||-->TIMER---------->error  0x%x"),error_code);      
@@ -146,12 +123,14 @@ int main(void)
 
 //9. 启动中断和定时器
     //(1)计时器启动
+    error_code |= ucTimerStart_2();
     error_code |= ucTimerStart_3();      /* TIMER3 计数器初始化*/ 
     error_code |= ucTimerStart_4();   
     //(2)中断启动
     ucINTStart_SDCard();
     ucINTStart_PPS();
     ucINTStart_UWB();
+      
 
 //10. 建立任务       
     error_code |= vTask_CreatTask();

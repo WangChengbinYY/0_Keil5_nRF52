@@ -26,9 +26,17 @@
 extern "C" {
 #endif
 
+///* GPS串口初始化
+// *    返回 0 成功；返回 1 失败  */    
+//uint8_t ucUART_GPS_Initial(void);
+
+
+///* GPS串口接收字符 */   
+//uint8_t ucUART_GPS_RX(void);
+    
 /* GPS串口初始化
  *    返回 0 成功；返回 1 失败  */    
-uint8_t ucUARTInital_GPS(void);  
+uint8_t ucUARTInital_GPS(void);
     
 /**
  * GPS UTC时间转 周内秒  */

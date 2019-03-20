@@ -8,7 +8,7 @@
 #include "Leo_nRF52_Time.h"
 
 
-const nrfx_timer_t Leo_TIMER1 = NRFX_TIMER_INSTANCE(1);   
+const nrfx_timer_t Leo_TIMER1 = NRFX_TIMER_INSTANCE(2);   
 
 //计时器计数值，1ms一个数 从0开始，1000一个循环
 extern uint16_t    G_MicroSecond;
@@ -22,12 +22,14 @@ extern uint16_t    G_MicroSecond;
 /*--------------------------------------------------------------------------*/
 static void Leo_TIME1_Event_Handler(nrf_timer_event_t event_type, void* p_context)
 {
-    if(event_type == NRF_TIMER_EVENT_COMPARE1)
+    if(event_type == NRF_TIMER_EVENT_COMPARE2)
     {
-        if(G_MicroSecond < 999)
-            G_MicroSecond++;
-        else
-            G_MicroSecond = 0;
+        	NRF_LOG_INFO("          Timer");     
+        NRF_LOG_FLUSH();   
+//        if(G_MicroSecond < 999)
+//            G_MicroSecond++;
+//        else
+//            G_MicroSecond = 0;
     }
 }
 
@@ -39,7 +41,7 @@ static void Leo_TIME1_Event_Handler(nrf_timer_event_t event_type, void* p_contex
 uint8_t Leo_TIME1_Initial(void)
 {
     uint8_t error_code = 0;
-    uint32_t time_ms = 1; //Time(in miliseconds) between consecutive compare events.
+    uint32_t time_ms = 1000; //Time(in miliseconds) between consecutive compare events.
     uint32_t time_ticks = 0;
     nrfx_timer_config_t timer_cfg = NRFX_TIMER_DEFAULT_CONFIG;
     error_code = nrfx_timer_init(&Leo_TIMER1, &timer_cfg, Leo_TIME1_Event_Handler);
@@ -47,7 +49,7 @@ uint8_t Leo_TIME1_Initial(void)
     time_ticks = nrfx_timer_ms_to_ticks(&Leo_TIMER1, time_ms);
 
     nrfx_timer_extended_compare(
-         &Leo_TIMER1, NRF_TIMER_CC_CHANNEL1, time_ticks, NRF_TIMER_SHORT_COMPARE1_CLEAR_MASK, true);
+         &Leo_TIMER1, NRF_TIMER_CC_CHANNEL2, time_ticks, NRF_TIMER_SHORT_COMPARE2_CLEAR_MASK, true);
     
     return error_code;
 }

@@ -28,6 +28,7 @@
 extern uint8_t      G_SDCard_FileIsOpen;               //标记是否已经打开文件
 extern uint32_t     G_GPSWeekSecond;
 extern uint16_t     G_MicroSecond;
+extern uint8_t      G_UWBData_IsComing;
 
 extern TaskHandle_t xTaskHandle_SDCard_Close;         /*SDCard 关闭文件任务  句柄 */
 extern TaskHandle_t xTaskHandle_UWB_EventHandler;    
@@ -46,9 +47,7 @@ extern TaskHandle_t xTaskHandle_UWB_EventHandler;
 /*----------------------------------------------------------------------*/
 static void vINTHandler_SDCard(nrfx_gpiote_pin_t pin, nrf_gpiote_polarity_t action)
 {
-//NRF_LOG_INFO("SDCard INIT is coming!");
-//NRF_LOG_FLUSH(); 
-    
+
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
     if(nrf_gpio_pin_read(configGPIO_INT_SDCard) == 0)
     {
@@ -65,26 +64,26 @@ static void vINTHandler_SDCard(nrfx_gpiote_pin_t pin, nrf_gpiote_polarity_t acti
                                     0,           
                                     eNoAction,
                                     &xHigherPriorityTaskWoken);            
-                //portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+                portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
             }
             
 
             //任务分析
-//            NRF_LOG_INFO("TEST:   SDCard INT is ok!");
-//            NRF_LOG_FLUSH();
-//            
-//            uint8_t pcWriteBuffer[300];
-//            NRF_LOG_INFO("=================================================");
-//            NRF_LOG_INFO("\nname      namestate  priority   rest   number");
-//            vTaskList((char *)&pcWriteBuffer);
-//            NRF_LOG_INFO("\n%s",pcWriteBuffer);
-//            NRF_LOG_FLUSH();
-//            
-//            NRF_LOG_INFO("=================================================");
-//            NRF_LOG_INFO("\nname       counter         reate");
-//            vTaskGetRunTimeStats((char *)&pcWriteBuffer);
-//            NRF_LOG_RAW_INFO("\n%s",pcWriteBuffer);
-//            NRF_LOG_FLUSH();             
+            NRF_LOG_INFO("TEST:   SDCard INT is ok!");
+            NRF_LOG_FLUSH();
+            
+            uint8_t pcWriteBuffer[300];
+            NRF_LOG_INFO("=================================================");
+            NRF_LOG_INFO("\nname      namestate  priority   rest   number");
+            vTaskList((char *)&pcWriteBuffer);
+            NRF_LOG_INFO("\n%s",pcWriteBuffer);
+            NRF_LOG_FLUSH();
+            
+            NRF_LOG_INFO("=================================================");
+            NRF_LOG_INFO("\nname       counter         reate");
+            vTaskGetRunTimeStats((char *)&pcWriteBuffer);
+            NRF_LOG_RAW_INFO("\n%s",pcWriteBuffer);
+            NRF_LOG_FLUSH();             
             
         }        
     }   
@@ -234,16 +233,16 @@ uint8_t ucINTStart_PPS(void)
 
 static void vINTHandler_UWB(nrfx_gpiote_pin_t pin, nrf_gpiote_polarity_t action)
 { 
-//    NRF_LOG_INFO("      UWB INIT is coming!");
-//    NRF_LOG_FLUSH(); 
-    
-    //通知 UWB  处理
-    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-    xTaskNotifyFromISR(xTaskHandle_UWB_EventHandler,    
-                        0,           
-                        eNoAction,
-                        &xHigherPriorityTaskWoken);            
-    //portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+    if(G_SDCard_FileIsOpen == 1)
+    {
+//        BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+//        xTaskNotifyFromISR(xTaskHandle_UWB_EventHandler,    
+//                            0,           
+//                            eNoAction,
+//                            &xHigherPriorityTaskWoken);            
+//        portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+        G_UWBData_IsComing = 1;
+    }
 }
 
 

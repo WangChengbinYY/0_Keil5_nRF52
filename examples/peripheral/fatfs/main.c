@@ -215,10 +215,23 @@ int main(void)
     NRF_LOG_FLUSH();    
     
     //初始化 GPIOTE 管脚功能
-	error_code |= nrfx_gpiote_init();
-    APP_ERROR_CHECK(error_code);
-	NRF_LOG_INFO("nRF52 GPIOTE Initialization is DONE!");
-    NRF_LOG_FLUSH();
+//	error_code |= nrfx_gpiote_init();
+//    APP_ERROR_CHECK(error_code);
+//	NRF_LOG_INFO("nRF52 GPIOTE Initialization is DONE!");
+//    NRF_LOG_FLUSH();
+    
+    
+    NRF_LOG_INFO("TIME0 Initialization is Begin....!");
+    error_code |= Leo_TIME1_Initial();
+    Leo_TIME1_Begin();      //启动定时器
+    NRF_LOG_INFO("TIME0 Initialization is DONE(err_code is 0x%x)",error_code);
+    nrf_delay_ms(30);
+    
+     while (true)
+    {
+        __WFE();
+    }
+    
     
     
     //初始化 SDCard 
