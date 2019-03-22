@@ -93,8 +93,9 @@ int main(void)
     NRF_LOG_INFO(("||Initialize||-->TIMER---------->error  0x%x"),error_code);      
     
 //4. 初始化SDCard 并建立存储文件  
-    error_code |= ucSDCard_INIT();  
-    error_code |= ucSDCard_SaveData(mTest,sizeof(mTest));
+    //error_code |= ucSDCard_INIT();  
+    nrf_delay_ms(10);
+    //error_code |= ucSDCard_SaveData(mTest,sizeof(mTest));
     if(error_code == 0)
     {
         G_SDCard_FileIsOpen = 1;
@@ -102,8 +103,8 @@ int main(void)
     NRF_LOG_INFO(("||Initialize||-->SDCard--------->error  0x%x"),error_code);     
    
 //5. 初始化 IMU 
-    error_code |= ucIMUInitial();
-    NRF_LOG_INFO(("||Initialize||-->IMU------------>error  0x%x"),error_code);      
+//    error_code |= ucIMUInitial();
+//    NRF_LOG_INFO(("||Initialize||-->IMU------------>error  0x%x"),error_code);      
     
 //6. 初始化GPS串口
     error_code |= ucUARTInital_GPS();

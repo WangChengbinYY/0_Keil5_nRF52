@@ -142,11 +142,7 @@ static void vUART_GPS_EventHandler(app_uart_evt_t * p_event)
 //            if(G_SDCard_FileIsOpen == 1)
 //            {
 //                tTime =   G_MicroSecond;
-            if((G_MicroSecond % 500) ==0 )
-            {   
-                NRF_LOG_INFO("                     Uart have data");
-                NRF_LOG_FLUSH();
-            }                
+               
             while(app_uart_get(&mChar) == NRF_SUCCESS)
             ;
 //                BaseType_t xHigherPriorityTaskWoken = pdFALSE;

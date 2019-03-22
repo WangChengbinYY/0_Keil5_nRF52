@@ -112,8 +112,8 @@
 /*------------------------- 寄存器相关 -------------------------*/
 #define configRegister_MPU_SPIReadBit 		        0x80		        //SPI读取数据时，对地址添加 (目前在MPU9255中使用)
 /* SDCard 存储buffer相关 */
-#define configBuffer_SDCard_Max                     1024
-#define configBuffer_SDCard_Save                    512
+#define configBuffer_SDCard_Max                     1024//8500
+#define configBuffer_SDCard_Save                    512//8192
 
 
 

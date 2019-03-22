@@ -43,7 +43,7 @@ extern TaskHandle_t    xTaskHandle_GPS_RxData;
  * 用于5ms的计时，数据5ms采集一次
  * 注意：TICK的单位是ms                                   */
 #define  configTIMER2_INSTANCE                      2
-#define  configTIMER2_TICK                          20                //ms
+#define  configTIMER2_TICK                          10                //ms
 
 const nrfx_timer_t  xTimerInstance_2 = NRFX_TIMER_INSTANCE(configTIMER2_INSTANCE); 
 
