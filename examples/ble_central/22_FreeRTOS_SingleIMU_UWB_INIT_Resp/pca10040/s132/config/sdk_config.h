@@ -5261,7 +5261,7 @@
  
 
 #ifndef SPI1_USE_EASY_DMA
-#define SPI1_USE_EASY_DMA 1
+#define SPI1_USE_EASY_DMA 0
 #endif
 
 // </e>
@@ -5747,7 +5747,7 @@
 // <2147483648=> 8 MHz 
 
 #ifndef APP_SDCARD_FREQ_DATA
-#define APP_SDCARD_FREQ_DATA 1073741824
+#define APP_SDCARD_FREQ_DATA 536870912
 #endif
 
 // </e>

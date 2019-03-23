@@ -235,12 +235,12 @@ static void vINTHandler_UWB(nrfx_gpiote_pin_t pin, nrf_gpiote_polarity_t action)
 { 
     if(G_SDCard_FileIsOpen == 1)
     {
-//        BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-//        xTaskNotifyFromISR(xTaskHandle_UWB_EventHandler,    
-//                            0,           
-//                            eNoAction,
-//                            &xHigherPriorityTaskWoken);            
-//        portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+        BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+        xTaskNotifyFromISR(xTaskHandle_UWB_EventHandler,    
+                            0,           
+                            eNoAction,
+                            &xHigherPriorityTaskWoken);            
+        portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
         G_UWBData_IsComing = 1;
     }
 }

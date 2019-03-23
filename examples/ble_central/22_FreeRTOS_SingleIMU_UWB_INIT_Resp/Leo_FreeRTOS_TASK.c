@@ -48,6 +48,7 @@ uint8_t     G_UWBData_IsComing;
 // 全局变量_SDCard存储缓存                                                         
 uint8_t	    G_CollectData[configBuffer_SDCard_Max];                 //SDCard要储存数据的缓存
 uint16_t    G_CollectData_Counter;  
+uint16_t    G_Collect_PreTime;                                      //前一次采样的间隔时间
 // 全局变量_SDCard文件操作标识                                                         
 uint8_t     G_SDCard_FileIsOpen;               //标记是否已经打开文件 没打开，默认为0
 
@@ -60,7 +61,7 @@ extern uint8_t G_UART_Buffer2_Counter;
 uint32_t mNumber_Collect = 0;
 uint32_t mNumber_UWB = 0;
 
-uint8_t mUWB = 0;
+
 
 /*=========================================== 任务优先级设定 ============================================*/
 /* 0级 */
@@ -95,11 +96,6 @@ TaskHandle_t    xTaskHandle_SDCard_Save         = NULL;         /*SDCard存储任务
 SemaphoreHandle_t   xMutex_SDCDBuffer           = NULL;
 //二值信号量，用于 GPS数据解析的缓存使用
 SemaphoreHandle_t   xSemaphore_GPSBuffer        = NULL;
-
-
-
-//TEST
-uint32_t  tSaveNum = 0;
 
 
 /**
@@ -137,6 +133,7 @@ void vINIT_Variable(void)
     G_GPSData[1] = 0xD1;
     G_GPSData[40] = 0xFF;  
     G_GPSData_IsReady = 0;
+    
     //全局变量_UWB测距数据
     memset(G_UWBData,0,12);
     G_UWBData[0] = 0xE1;
@@ -144,9 +141,12 @@ void vINIT_Variable(void)
     G_UWBData[11] = 0xFF; 
     G_UWBData_IsReady = 0;
     G_UWBData_IsComing = 0;
+    
     // 全局变量_SDCard存储缓存        
     memset(G_CollectData,0,configBuffer_SDCard_Max);
     G_CollectData_Counter = 0;    
+    G_Collect_PreTime = 0;
+    
     //全局变量_SDCard文件操作标识 
     G_SDCard_FileIsOpen = 0;                    //标记是否已经打开文件 没打开，默认为0 
 }
@@ -155,7 +155,7 @@ void vINIT_Variable(void)
 
 
 
-///*=========================================== 任务实现 ==============================================*/
+/*=========================================== 任务实现 ==============================================*/
 /*------------------------------------------------------------
  *SDCard关闭文件任务 函数
  *------------------------------------------------------------*/
@@ -166,38 +166,11 @@ static void vTask_UWB_EventHandler(void *pvParameters)
     uint8_t  tNumber = 50;
     while(1)
     {
-        xTaskNotifyWait(0x00000000,     
-                0xFFFFFFFF,     
-                NULL,                 /* 保存ulNotifiedValue到变量ulValue中 如果不用可以设为NULL */
-                portMAX_DELAY);       /* 最大允许延迟时间 portMAX_DELAY 表示永远等待*/ 
-
+        xTaskNotifyWait(0x00000000,0xFFFFFFFF,NULL,portMAX_DELAY); 
         
         if(G_SDCard_FileIsOpen == 1)
         { 
-
-//        NRF_LOG_INFO("vTask_UWB_EventHandler  RX NOTE!");
-//        NRF_LOG_FLUSH();
-            
-            
-            
             error_code_UWB = ucSS_INIT_Handler(&tDistance,&tNumber);
-            
-//            nrf_delay_us(500);
-            
-            NRF_LOG_INFO("      5 %d",G_MicroSecond);
-            NRF_LOG_FLUSH(); 
-            
-            
-//            uint8_t pcWriteBuffer[300];
-//            NRF_LOG_INFO("=================================================");
-//            NRF_LOG_INFO("\nname      namestate  priority   rest   number");
-//            vTaskList((char *)&pcWriteBuffer);
-//            NRF_LOG_INFO("\n%s",pcWriteBuffer);
-//            NRF_LOG_FLUSH();
-            
-            
-            
-            
             
             //假装获取了数据进行 试验存储
             //(1)存储时间 和数据
@@ -231,9 +204,6 @@ static void vTask_SDCard_Close(void *pvParameters)
 			
         nrf_delay_ms(200);
         
-//		NRF_LOG_INFO("File Close is OK!!!");
-//        NRF_LOG_FLUSH();  
-        
         erro_code = ucSDCard_CloseFile();
             
         if(erro_code == 0)
@@ -248,15 +218,15 @@ static void vTask_SDCard_Close(void *pvParameters)
                 NRF_LOG_INFO("File Close is OK!!!");
                 NRF_LOG_FLUSH();  
             }else
-		        {
-				        NRF_LOG_INFO("File Close is Wrong!!!");
+            {
+                NRF_LOG_INFO("File Close is Wrong!!!");
                 NRF_LOG_FLUSH(); 
-				        while(1)
-				            {
-					            nrf_delay_ms(150);
-					            nrfx_gpiote_out_toggle(configGPIO_LED_R);            
-				            }
-			      }	
+                while(1)
+                    {
+                        nrf_delay_ms(150);
+                        nrfx_gpiote_out_toggle(configGPIO_LED_R);            
+                    }
+              }	
     }
 }
 
@@ -274,42 +244,31 @@ void vApplicationStackOverflowHook( TaskHandle_t xTask, char *pcTaskName )
  *------------------------------------------------------------*/
 static void vTask_SDCard_Save(void *pvParameters)
 {
-    uint8_t erro_code = 0;   
-    uint16_t tTime = 0;
+    uint8_t erro_code = 0;    
     while(1)
     {
-        xTaskNotifyWait(0x00000000,     
-                0xFFFFFFFF,     
-                NULL,                 /* 保存ulNotifiedValue到变量ulValue中 如果不用可以设为NULL */
-                portMAX_DELAY);       /* 最大允许延迟时间 portMAX_DELAY 表示永远等待*/ 
-     
+        xTaskNotifyWait(0x00000000,0xFFFFFFFF,NULL,portMAX_DELAY);
         
         if(G_SDCard_FileIsOpen == 1)
         {  
+            
             if(xSemaphoreTake( xMutex_SDCDBuffer, ( TickType_t ) 10 ) == pdTRUE)
             {
-                tTime = G_MicroSecond;
-                //erro_code = ucSDCard_SaveData(G_CollectData,configBuffer_SDCard_Save); 
-                nrf_delay_ms(7);
+                erro_code = ucSDCard_SaveData(G_CollectData,configBuffer_SDCard_Save); 
                 if(G_CollectData_Counter > configBuffer_SDCard_Save)
                 {
                     G_CollectData_Counter = G_CollectData_Counter - configBuffer_SDCard_Save;
                     memcpy(G_CollectData,(G_CollectData+configBuffer_SDCard_Save),G_CollectData_Counter);
+                
                 }
-                tTime = G_MicroSecond - tTime;
                 //释放资源
                 xSemaphoreGive( xMutex_SDCDBuffer ); 
 			}
-            tSaveNum = tSaveNum + configBuffer_SDCard_Save;
-            NRF_LOG_INFO("      3  UseTime %d,Second %d,Number is %d",tTime,G_GPSWeekSecond,tSaveNum);
-            NRF_LOG_FLUSH();
-            
-            
             
             if(erro_code != 0)
             {
-                NRF_LOG_INFO("SDCard Save is Wrong!!!!!!!!!! %d",erro_code);
-                NRF_LOG_FLUSH(); 
+                //存储错误，停止采集，并警告
+                G_SDCard_FileIsOpen = 0;
                 while(1)
                 {
                     nrf_delay_ms(100);
@@ -332,11 +291,12 @@ static void vTask_GPSData_Decode(void *pvParameters)
 
         
         
-//            NRF_LOG_INFO("        4");
-//            NRF_LOG_FLUSH();
+        
+//            NRF_LOG_INFO("                     vTask_GPSData_Decode  RX NOTE!");
+//            NRF_LOG_FLUSH(); 
             
-        nrf_delay_ms(2);
-        G_GPSData_IsReady = 1;
+            nrf_delay_ms(2);
+                        G_GPSData_IsReady = 1;
             
         /*    
         //若是在存储状态下 则进行解析
@@ -420,40 +380,48 @@ static void vTask_GPSData_Decode(void *pvParameters)
     }
 }
 
+
+
 /*------------------------------------------------------------
  *外部传感器数据采集，主要包括：
  *  MPU9255A、MPU9255B、压力传感器
  *------------------------------------------------------------*/
 static void vTask_CollectData(void *pvParameters)
 {
+    uint16_t TempTime = 0;
+    
     uint8_t error_code_Foot = 0;
 	nrf_saadc_value_t tSAResult[4] = {0};
     while(1)
     {
-        xTaskNotifyWait(0x00000000,     
-                0xFFFFFFFF,     
-                NULL,                 /* 保存ulNotifiedValue到变量ulValue中 如果不用可以设为NULL */
-                portMAX_DELAY);       /* 最大允许延迟时间 portMAX_DELAY 表示永远等待*/ 
-      
+        xTaskNotifyWait(0x00000000,0xFFFFFFFF,NULL,portMAX_DELAY);      
+        
         if(G_SDCard_FileIsOpen == 1)
         {
-          mUWB++;
-            
+    //0.确保两次采样间隔不大于10ms
+            if(G_MicroSecond < G_Collect_PreTime)            
+                TempTime = G_MicroSecond +1000 - G_Collect_PreTime;
+            else
+                TempTime = G_MicroSecond  - G_Collect_PreTime;            
+            G_Collect_PreTime = G_MicroSecond;            
+            if(TempTime<10)
+                vTaskDelay(10-TempTime);
+
     //1. 采集IMU数据        
             //(1)记录时间数据
             memcpy(G_IMU_Data_A+2,&G_GPSWeekSecond,sizeof(G_GPSWeekSecond)); 
             memcpy(G_IMU_Data_A+6,&G_MicroSecond,sizeof(G_MicroSecond));       
             
-//            //(2)采集IMU_A 的数据
-//            //选择IMU_A nCS管脚
-//            nrfx_gpiote_out_clear(configGPIO_SPI_IMUA_nCS); 
-//            nrf_delay_us(1); 
-//            //采集IMU_A 的数据
-//            Leo_MPU9255_Read_ACC(G_IMU_Data_A+8);
-//            Leo_MPU9255_Read_Gyro(G_IMU_Data_A+14);
-//            Leo_MPU9255_Read_Magnetic(G_IMU_Data_A+20);
-//            //关闭IMU_A nCS管脚
-//            nrfx_gpiote_out_set(configGPIO_SPI_IMUA_nCS);    
+            //(2)采集IMU_A 的数据
+            //选择IMU_A nCS管脚
+            nrfx_gpiote_out_clear(configGPIO_SPI_IMUA_nCS); 
+            nrf_delay_us(1); 
+            //采集IMU_A 的数据
+            Leo_MPU9255_Read_ACC(G_IMU_Data_A+8);
+            Leo_MPU9255_Read_Gyro(G_IMU_Data_A+14);
+            Leo_MPU9255_Read_Magnetic(G_IMU_Data_A+20);
+            //关闭IMU_A nCS管脚
+            nrfx_gpiote_out_set(configGPIO_SPI_IMUA_nCS);    
             
     //2. 采集压力传感器数据
             //(1)记录时间数据
@@ -461,16 +429,14 @@ static void vTask_CollectData(void *pvParameters)
             memcpy(G_FOOTPresure+6,&G_MicroSecond,sizeof(G_MicroSecond));   
             //(2)采集 AD 数据  
             //采集 AD 通道的数据
-//            error_code_Foot |= nrfx_saadc_sample_convert(0,tSAResult);
-//            error_code_Foot |= nrfx_saadc_sample_convert(1,tSAResult+1);        
-//            error_code_Foot |= nrfx_saadc_sample_convert(2,tSAResult+2);  
-//            error_code_Foot |= nrfx_saadc_sample_convert(3,tSAResult+3);    
+            error_code_Foot |= nrfx_saadc_sample_convert(0,tSAResult);
+            error_code_Foot |= nrfx_saadc_sample_convert(1,tSAResult+1);        
+            error_code_Foot |= nrfx_saadc_sample_convert(2,tSAResult+2);  
+            error_code_Foot |= nrfx_saadc_sample_convert(3,tSAResult+3);    
             if(error_code_Foot == 0)
             {
                 memcpy(G_FOOTPresure+8,tSAResult,sizeof(tSAResult));
-            }            
-            
-            //vSS_INIT_Start();
+            }   
             
     //4. 数据进行存储        
             /*都采集完了,整体存储 等待10ms，如果还没有释放，则放弃此次存储*/
@@ -489,6 +455,7 @@ static void vTask_CollectData(void *pvParameters)
                         G_CollectData_Counter = G_CollectData_Counter + sizeof(G_FOOTPresure);
                     }
                 }
+                
                 //存入GPS数据
                 if(G_GPSData_IsReady == 1)
                 {
@@ -498,62 +465,30 @@ static void vTask_CollectData(void *pvParameters)
                         memcpy(G_CollectData+G_CollectData_Counter,G_GPSData,sizeof(G_GPSData));
                         G_CollectData_Counter = G_CollectData_Counter + sizeof(G_GPSData);
                     }
-//                    NRF_LOG_INFO("                           I Have G_GPSData!");
                 }
+                
                 //存入UWB数据
-                if(G_UWBData_IsReady == 0)
+                if(G_UWBData_IsReady == 1)
                 {
                     G_UWBData_IsReady = 0;
                     if((sizeof(G_UWBData)+G_CollectData_Counter)<=configBuffer_SDCard_Max)
                     {
                         memcpy(G_CollectData+G_CollectData_Counter,G_UWBData,sizeof(G_UWBData));
                         G_CollectData_Counter = G_CollectData_Counter + sizeof(G_UWBData);
-                    }
-                    
-//                    if((G_MicroSecond % 500) ==0 )
-//                    {   
-//                        NRF_LOG_INFO("I Have UWB Data!");
-//                        NRF_LOG_FLUSH();
-//                    }
-                   
+                    }  
                 }			
                 //释放资源
                 xSemaphoreGive( xMutex_SDCDBuffer ); 
             }
-          if((G_MicroSecond % 500) ==0 )
-                    {   
-        NRF_LOG_INFO("  1 %d",G_MicroSecond);
-        NRF_LOG_FLUSH();
-        }
-            
+            //存入SDCard 或者 启动UWB测距
             if(G_CollectData_Counter > configBuffer_SDCard_Save)
             {
                 //通知 SDCard存储
                 xTaskNotify(xTaskHandle_SDCard_Save,0,eNoAction);   
             }else
             {
-//               if((mUWB%4)==0)
-//               {
-                
-                uint16 tDistance;
-                uint8_t tNumber;
-                ucSS_INIT_RUN(tDistance,tNumber);
-                memcpy(G_UWBData+2,&G_GPSWeekSecond,sizeof(G_GPSWeekSecond)); 
-                memcpy(G_UWBData+6,&G_MicroSecond,sizeof(G_MicroSecond));  
-                memcpy(G_UWBData+8,&tNumber,sizeof(tNumber));
-                memcpy(G_UWBData+9,&tDistance,sizeof(tDistance));
-                G_UWBData_IsReady = 1;
-                
-          if((G_MicroSecond % 500) ==0 )
-                    {                   
-                NRF_LOG_INFO("    2 %d",G_MicroSecond);
-                NRF_LOG_FLUSH();  
-                                }
-//               }                   
-                
+                vSS_INIT_Start();
             }
-            
-            
         }
 	}
 }
@@ -639,31 +574,7 @@ uint8_t vTask_CreatTask(void)
     {
        erro_code = 1;
     } 
-    
-    
-    
-//    (6) 建立采集任务 10ms定时器 
-    // xTimerHandle_CollectData = xTimerCreate("10ms",
-                                            // xTimer,
-                                            // pdTRUE,
-                                            // (void *)1,
-                                            // vTimer_CollectData);
-    // if(xTimerHandle_CollectData == NULL)
-    // {
-        // erro_code = 1;
-    // }else{
-        // if(xTimerStart(xTimerHandle_CollectData,1000) != pdPASS)
-        // {
-            // erro_code = 1;
-            // NRF_LOG_INFO("vTimer_CollectData Start is Wrong!");
-            // NRF_LOG_FLUSH(); 
-        // }else{
-            // NRF_LOG_INFO("vTimer_CollectData Start is OK!");
-            // NRF_LOG_FLUSH(); 
-        // }
-        
-    // }    
-    
+   
     
 //    NRF_LOG_INFO("TEST:   SDCard INT is ok!");
 //    NRF_LOG_FLUSH();
@@ -680,9 +591,6 @@ uint8_t vTask_CreatTask(void)
 //    vTaskGetRunTimeStats((char *)&pcWriteBuffer);
 //    NRF_LOG_RAW_INFO("\n%s",pcWriteBuffer);
 //    NRF_LOG_FLUSH(); 
-        
-    
-    
     
     return erro_code;    
 }

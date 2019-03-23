@@ -149,15 +149,15 @@ uint8_t ucSS_INIT_Initial(void)
 
     /* Enable wanted interrupts (TX confirmation, RX good frames, RX timeouts and RX errors). */
     //设置中断 接收成功 各种接收错误
-    //dwt_setinterrupt((DWT_INT_RFCG|configUWB_INIT_SYSMASK_ALL_RX_ERR),1);
-    dwt_setinterrupt((DWT_INT_RFCG|DWT_INT_RFTO),1);
+    dwt_setinterrupt((DWT_INT_RFCG|configUWB_INIT_SYSMASK_ALL_RX_ERR),1);
+    //dwt_setinterrupt((DWT_INT_RFCG|DWT_INT_RFTO),1);
     
     /* Apply default antenna delay value. See NOTE 2 below. */
     dwt_setrxantennadelay(RX_ANT_DLY);
     dwt_settxantennadelay(TX_ANT_DLY);    
     
     //接收超时设定 5ms
-    dwt_setrxtimeout(5000); // Maximum value timeout with DW1000 is 65ms 
+    dwt_setrxtimeout(7000); // Maximum value timeout with DW1000 is 65ms 
 
     return error_code;
 }
@@ -195,8 +195,6 @@ uint8_t ucSS_INIT_Handler(uint16* pDistance,uint8_t* pNumber)
     
     status_reg = dwt_read32bitreg(SYS_STATUS_ID); 
 
- 
-    
 //4.收到反馈     
     //(1)接收成功      
     if (status_reg & SYS_STATUS_RXFCG)
@@ -263,12 +261,8 @@ uint8_t ucSS_INIT_Handler(uint16* pDistance,uint8_t* pNumber)
         /* Clear RX error/timeout events in the DW1000 status register. */
         dwt_write32bitreg(SYS_STATUS_ID, configUWB_INIT_SYSSTATUS_ALL_RX_ERR);
 
-
-        
         /* Reset RX to properly reinitialise LDE operation. */
         dwt_rxreset();
-        
-
         
         INIT_frame_seq_nb++;
         return 1;
@@ -305,17 +299,14 @@ uint8_t ucSS_INIT_RUN(uint16* pDistance,uint8_t* pNumber)
 //3.发送后，等待反馈
     /* We assume that the transmission is achieved correctly, poll for reception of a frame or error/timeout. See NOTE 4 below. */
     //SYS_STATUS_RXFCG 接收成功；SYS_STATUS_ALL_RX_TO 接收超时；SYS_STATUS_ALL_RX_ERR 接收错误
-//    while(!G_UWBData_IsComing)
-//    {
-//        vTaskDelay(1);
-//    }
-//    G_UWBData_IsComing = 0;
-////    NRF_LOG_INFO("  1--->2");
-////    NRF_LOG_FLUSH(); 
-//    status_reg = dwt_read32bitreg(SYS_STATUS_ID);
-//     nrf_delay_us(10);
-    while (!((status_reg = dwt_read32bitreg(SYS_STATUS_ID)) & (SYS_STATUS_RXFCG | SYS_STATUS_ALL_RX_TO | SYS_STATUS_ALL_RX_ERR)))
-    {};    
+    while(!G_UWBData_IsComing)
+    {
+        vTaskDelay(1);
+    }
+    G_UWBData_IsComing = 0;
+    status_reg = dwt_read32bitreg(SYS_STATUS_ID);
+//    while (!((status_reg = dwt_read32bitreg(SYS_STATUS_ID)) & (SYS_STATUS_RXFCG | SYS_STATUS_ALL_RX_TO | SYS_STATUS_ALL_RX_ERR)))
+//    {};    
     
   
         
@@ -346,18 +337,15 @@ uint8_t ucSS_INIT_RUN(uint16* pDistance,uint8_t* pNumber)
         //清楚成功接收 事件标志位，以防下一个循环误判
         // It can also be cleared explicitly by writing a 1 to it.
         dwt_write32bitreg(SYS_STATUS_ID, SYS_STATUS_RXFCG);
-         nrf_delay_us(10);
         
 
         /* A frame has been received, read it into the local buffer. */
         //读取寄存器，获取接收到数据的长度
         frame_len = dwt_read32bitreg(RX_FINFO_ID) & RX_FINFO_RXFLEN_MASK;
-         nrf_delay_us(10);
         //将接收到的数据，存入缓存内        
         if (frame_len <= INIT_RX_BUF_LEN)
         {
           dwt_readrxdata(INIT_rx_buffer, frame_len, 0);
-          nrf_delay_us(10);
         }else
         {
             //return 1;
@@ -380,13 +368,10 @@ uint8_t ucSS_INIT_RUN(uint16* pDistance,uint8_t* pNumber)
             uint16_t tDistance = 0;
             /* Retrieve poll transmission and response reception timestamps. See NOTE 5 below. */
             poll_tx_ts = dwt_readtxtimestamplo32();
-             nrf_delay_us(10);
             resp_rx_ts = dwt_readrxtimestamplo32();
-             nrf_delay_us(10);
 
             /* Read carrier integrator value and calculate clock offset ratio. See NOTE 7 below. */
             clockOffsetRatio = dwt_readcarrierintegrator() * (FREQ_OFFSET_MULTIPLIER * HERTZ_TO_PPM_MULTIPLIER_CHAN_5 / 1.0e6) ;
-             nrf_delay_us(10);
 
             /* Get timestamps embedded in response message. */
             vSS_INIT_resp_msg_get_ts(&INIT_rx_buffer[RESP_MSG_POLL_RX_TS_IDX], &poll_rx_ts);
@@ -414,11 +399,10 @@ uint8_t ucSS_INIT_RUN(uint16* pDistance,uint8_t* pNumber)
         
         /* Clear RX error/timeout events in the DW1000 status register. */
         dwt_write32bitreg(SYS_STATUS_ID, SYS_STATUS_ALL_RX_TO | SYS_STATUS_ALL_RX_ERR);
-         nrf_delay_us(10);
 
         /* Reset RX to properly reinitialise LDE operation. */
-        dwt_rxreset();
-         nrf_delay_us(10);
+        //dwt_rxreset();
+        
         G_UWBData_IsReady = 1;
         INIT_frame_seq_nb++;
         //return 1;
@@ -576,7 +560,7 @@ uint8_t ucSS_RESP_Initial(void)
     dwt_settxantennadelay(TX_ANT_DLY);    
     
     //接收超时设定 10ms
-    dwt_setrxtimeout(10000); // Maximum value timeout with DW1000 is 65ms 
+    dwt_setrxtimeout(7000); // Maximum value timeout with DW1000 is 65ms 
 
     return error_code;
 }

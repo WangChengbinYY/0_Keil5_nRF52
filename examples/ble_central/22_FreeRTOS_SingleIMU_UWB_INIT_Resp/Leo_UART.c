@@ -19,14 +19,19 @@
 #include "Leo_UART.h"
 #include "minmea.h"
 
-//#define UART_RX_BUF_SIZE 10                         /**< UART RX buffer size. */
 
 extern TaskHandle_t    xTaskHandle_GPS_RxData; 
 extern uint8_t         G_SDCard_FileIsOpen;               //标记是否已经打开文件
 extern uint16_t        G_MicroSecond; 
 
+
+
+
+
+
 #define UART_RX_BUF_SIZE 128      
 #define UART_TX_BUF_SIZE 128
+
 
 
 //uint8_t G_Uart_Buffer1[UART_RX_BUF_SIZE];
@@ -132,17 +137,12 @@ static void vUART_GPS_EventHandler(app_uart_evt_t * p_event)
     uint8_t mChar;
     switch (p_event->evt_type)
     {
-//    	case APP_UART_COMMUNICATION_ERROR:
-//            NRF_LOG_INFO("                     Uart have data error");
-//    		break;
-//    	case APP_UART_FIFO_ERROR:
-//            NRF_LOG_INFO("                     Uart have data error");
-//    		break;
+
         case APP_UART_DATA_READY:
 //            if(G_SDCard_FileIsOpen == 1)
 //            {
 //                tTime =   G_MicroSecond;
-               
+                
             while(app_uart_get(&mChar) == NRF_SUCCESS)
             ;
 //                BaseType_t xHigherPriorityTaskWoken = pdFALSE;
