@@ -36,17 +36,17 @@ uint8_t ucSS_INIT_Initial(void);
 void vSS_INIT_Start(void);  
     
 /**
- * 接收反馈 并处理   */
+ * 发起者  接收反馈 并处理   */
 uint8_t ucSS_INIT_Handler(uint16* pDistance,uint8_t* pNumber);    
     
-//    
-///**
-// * 发起者  启动测距   */
-//uint8_t ucSS_INIT_RUN(uint16* pDistance,uint8_t* pNumber);
-//    
-///**
-// * 响应者  反馈测距   */
-//uint8_t ucSS_RESP_RUN(void);
+    
+    
+/* 响应端 初始化   */
+uint8_t ucSS_RESP_Initial(void);    
+    
+/**
+ *响应端 接收反馈 并处理   */
+uint8_t ucSS_RESP_Handler(void);
 
     
     

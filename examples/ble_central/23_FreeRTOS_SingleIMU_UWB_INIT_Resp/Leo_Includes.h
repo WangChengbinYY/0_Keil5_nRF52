@@ -120,7 +120,7 @@
 #define configBufferUART_TX_SIZE                    128
 
 //UWB选择
-
+#define configUWB_Terminal_INIT                     0                   //1 代表发起端 0 代表响应端                           
 
 
 
@@ -294,10 +294,6 @@
 #define configUWB_RESP_SYSMASK_ALL_RX_ERR   (DWT_INT_RPHE | DWT_INT_RFCE | DWT_INT_RFSL | DWT_INT_SFDT )
 /* UWB 配置  响应者接收错误 Status 标识 用于重置中断标志*/
 #define configUWB_RESP_SYSSTATUS_ALL_RX_ERR (SYS_STATUS_RXPHE | SYS_STATUS_RXFCE | SYS_STATUS_RXRFSL | SYS_STATUS_RXSFDTO | SYS_STATUS_RXRFTO | SYS_STATUS_RXPTO )
-
-
-
-
 
 
 #endif

@@ -271,7 +271,7 @@ uint8_t ucMPU9255_INIT(void)
     {
         memcpy(G_CollectData1+G_CollectData1_Counter,G_MAG_Coeffi,6);
         G_CollectData1_Counter = G_CollectData1_Counter + 6;
-        NRF_LOG_INFO("		AK8963 Config is ：0x%x %x %x",G_MAG_Coeffi[2],G_MAG_Coeffi[3],G_MAG_Coeffi[4]);
+        NRF_LOG_INFO("		AK8963 Config is:0x%x %x %x",G_MAG_Coeffi[2],G_MAG_Coeffi[3],G_MAG_Coeffi[4]);
     }        
 	//试验 输出读出的 
 	//Left的修正参数为：0xAF 0xB2 0xA6  这里要注意，不同的芯片，此处的参数不一样
@@ -313,11 +313,11 @@ uint8_t ucMPU9255_INIT(void)
     //试验读取MPU9255设备ID 0x73 正确返回值为：1
 	error_code |=Leo_MPU9255_SPI_ReadBytes(MPU9255_WHO_AM_I,&mMPU9255_ID,1); 
 	nrf_delay_ms(3);		
-	NRF_LOG_INFO("		MPU9255 Device ID_0x73 is ：0x%x",mMPU9255_ID);
+	NRF_LOG_INFO("		MPU9255 Device ID_0x73 is:0x%x",mMPU9255_ID);
 	
 	//试验读取AK8963设备ID 0x48 正确返回值为：1
 	error_code |=Leo_MPU9255_AK8963_SPI_ReadBytes(MPU9255_AK8963_WIA, &mAK8963_ID,1 );	
-	NRF_LOG_INFO("		AK8963 Device ID_0x48 is ：0x%x",mAK8963_ID);
+	NRF_LOG_INFO("		AK8963 Device ID_0x48 is:0x%x",mAK8963_ID);
 	nrf_delay_ms(3);		
 	
 	return error_code;

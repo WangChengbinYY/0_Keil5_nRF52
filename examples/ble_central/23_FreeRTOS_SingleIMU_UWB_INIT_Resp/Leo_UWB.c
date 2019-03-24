@@ -186,12 +186,14 @@ void vSS_INIT_Start(void)
 
 }
 
+
+
+
 /**
  *  UWB 发起端 接收反馈 并处理   */
 uint8_t ucSS_INIT_Handler(uint16* pDistance,uint8_t* pNumber)
 {
     uint32 status_reg = 0;
-    uint8_t error_code = 0;
     
     status_reg = dwt_read32bitreg(SYS_STATUS_ID); 
 
@@ -215,7 +217,7 @@ uint8_t ucSS_INIT_Handler(uint16* pDistance,uint8_t* pNumber)
           dwt_readrxdata(INIT_rx_buffer, frame_len, 0);
         }else
         {
-            //return 1;
+            return 1;
         }
 
 
@@ -553,18 +555,123 @@ uint8_t ucSS_RESP_Initial(void)
     /* Enable wanted interrupts (TX confirmation, RX good frames, RX timeouts and RX errors). */
     //dwt_setinterrupt(DWT_INT_TFRS | DWT_INT_RFCG | DWT_INT_RFTO | DWT_INT_RXPTO | DWT_INT_RPHE | DWT_INT_RFCE | DWT_INT_RFSL | DWT_INT_SFDT, 1);
     //此处需要设定中断响应的事件  接收成功 接收错误 发送成功 发送失败 (不需要接收超时，因为一直在等待接收)
-    //dwt_setinterrupt(DWT_INT_RFCG | SYS_STATUS_ALL_RX_ERR | DWT_INT_RFTO | DWT_INT_RXPTO,1);
-    
+    dwt_setinterrupt(DWT_INT_RFCG | configUWB_RESP_SYSMASK_ALL_RX_ERR,1);
+   
     /* Apply default antenna delay value. See NOTE 2 below. */
     dwt_setrxantennadelay(RX_ANT_DLY);
     dwt_settxantennadelay(TX_ANT_DLY);    
     
-    //接收超时设定 10ms
-    dwt_setrxtimeout(7000); // Maximum value timeout with DW1000 is 65ms 
-
+    //开始准备接收
+    dwt_rxenable(DWT_START_RX_IMMEDIATE);
+    
     return error_code;
 }
 
+
+/**
+ *  UWB 接收端 接收反馈 并处理   */
+uint8_t ucSS_RESP_Handler(void)
+{
+    uint8_t tNumber = 0;
+    uint32 status_reg = 0;
+    status_reg = dwt_read32bitreg(SYS_STATUS_ID); 
+    if (status_reg & SYS_STATUS_RXFCG)
+    {
+        uint32 frame_len;
+        
+        /* Clear good RX frame event in the DW1000 status register. */
+        dwt_write32bitreg(SYS_STATUS_ID, SYS_STATUS_RXFCG);
+        
+        /* A frame has been received, read it into the local buffer. */
+        frame_len = dwt_read32bitreg(RX_FINFO_ID) & RX_FINFO_RXFLEN_MASK;
+        if (frame_len <= RSP_RX_BUF_LEN)
+        {
+          dwt_readrxdata(RSP_rx_buffer, frame_len, 0);
+        }else
+        {
+            //接收非本系统的数据包
+            dwt_rxreset(); 
+            dwt_rxenable(DWT_START_RX_IMMEDIATE);
+            return 1;
+        }
+        
+        tNumber = RSP_rx_buffer[ALL_MSG_SN_IDX];
+        RSP_rx_buffer[ALL_MSG_SN_IDX] = 0;
+        if (memcmp(RSP_rx_buffer, RSP_rx_poll_msg, ALL_MSG_COMMON_LEN) == 0)
+        {
+            uint32_t resp_tx_time;
+            uint64_t poll_rx_ts,resp_tx_ts;
+            int ret;
+            
+            /* Retrieve poll reception timestamp. */
+            poll_rx_ts = vSS_RESP_get_rx_timestamp_u64();
+            
+            
+            /* Compute final message transmission time. See NOTE 7 below. */
+            resp_tx_time = (poll_rx_ts + (POLL_RX_TO_RESP_TX_DLY_UUS * UUS_TO_DWT_TIME)) >> 8;
+            dwt_setdelayedtrxtime(resp_tx_time);
+            
+            /* Response TX timestamp is the transmission time we programmed plus the antenna delay. */
+            resp_tx_ts = (((uint64)(resp_tx_time & 0xFFFFFFFEUL)) << 8) + TX_ANT_DLY;
+            
+            /* Write all timestamps in the final message. See NOTE 8 below. */
+            vSS_RESP_resp_msg_set_ts(&RSP_tx_resp_msg[RESP_MSG_POLL_RX_TS_IDX], poll_rx_ts);
+            vSS_RESP_resp_msg_set_ts(&RSP_tx_resp_msg[RESP_MSG_RESP_TX_TS_IDX], resp_tx_ts);
+
+            /* Write and send the response message. See NOTE 9 below. */
+            RSP_tx_resp_msg[ALL_MSG_SN_IDX] = tNumber;
+            dwt_writetxdata(sizeof(RSP_tx_resp_msg), RSP_tx_resp_msg, 0); /* Zero offset in TX buffer. See Note 5 below.*/
+            dwt_writetxfctrl(sizeof(RSP_tx_resp_msg), 0, 1); /* Zero offset in TX buffer, ranging. */
+            ret = dwt_starttx(DWT_START_TX_DELAYED);
+            
+            if (ret == DWT_SUCCESS)
+            {
+                /* Poll DW1000 until TX frame sent event set. See NOTE 5 below. */
+                while (!(dwt_read32bitreg(SYS_STATUS_ID) & SYS_STATUS_TXFRS))
+                {};
+
+                /* Clear TXFRS event. */
+                dwt_write32bitreg(SYS_STATUS_ID, SYS_STATUS_TXFRS);
+                    
+                dwt_rxreset(); 
+                dwt_rxenable(DWT_START_RX_IMMEDIATE);
+                return 0;
+            }
+            else
+            {
+                /* If we end up in here then we have not succeded in transmitting the packet we sent up.
+                POLL_RX_TO_RESP_TX_DLY_UUS is a critical value for porting to different processors. 
+                For slower platforms where the SPI is at a slower speed or the processor is operating at a lower 
+                frequency (Comparing to STM32F, SPI of 18MHz and Processor internal 72MHz)this value needs to be increased.
+                Knowing the exact time when the responder is going to send its response is vital for time of flight 
+                calculation. The specification of the time of respnse must allow the processor enough time to do its 
+                calculations and put the packet in the Tx buffer. So more time is required for a slower system(processor).
+                */
+
+                /* Reset RX to properly reinitialise LDE operation. */
+                dwt_rxreset(); 
+                dwt_rxenable(DWT_START_RX_IMMEDIATE);
+                return 1;                
+            } 
+        }else
+        {
+            dwt_rxreset(); 
+            dwt_rxenable(DWT_START_RX_IMMEDIATE);
+            return 1; 
+        }
+    }else
+    {
+        //失败的话
+        /* Clear RX error events in the DW1000 status register. */
+        dwt_write32bitreg(SYS_STATUS_ID, SYS_STATUS_ALL_RX_ERR);
+
+        /* Reset RX to properly reinitialise LDE operation. */
+        dwt_rxreset();  
+        dwt_rxenable(DWT_START_RX_IMMEDIATE);
+        return 1; 
+    }
+    
+}
 
 
 

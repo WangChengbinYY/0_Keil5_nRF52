@@ -23,13 +23,9 @@
 
 extern uint16_t    G_MicroSecond;
 extern uint32_t    G_GPSWeekSecond;
-extern uint8_t	   G_IMUData_Counter;
 extern uint8_t     G_SDCard_FileIsOpen;
 extern TaskHandle_t    xTaskHandle_CollectData;         /*5ms触发的采集任务    句柄 */
 extern TaskHandle_t    xTaskHandle_GPS_RxData;
-
-
-
 
 /* TIMER计时器相关 
  * Your application cannot use RTC0 and TIMER0 if you are using BLE
@@ -59,7 +55,7 @@ static void vTimerHandler_2(nrf_timer_event_t event_type, void* p_context)
         //10ms 触发采集任务
         //这做判断 是否采集
         if(G_SDCard_FileIsOpen == 1)
-        {
+        {     
             xTaskNotifyFromISR(xTaskHandle_CollectData,0,eNoAction,&xHigherPriorityTaskWoken);            
             portYIELD_FROM_ISR(xHigherPriorityTaskWoken);  
         }
@@ -80,9 +76,6 @@ uint8_t ucTimerInitial_2(void)
                                 nrfx_timer_ms_to_ticks(&xTimerInstance_2,configTIMER2_TICK), 
                                 NRF_TIMER_SHORT_COMPARE2_CLEAR_MASK, 
                                 true);    
-//    uint32_t titck = nrfx_timer_us_to_ticks(&xTimerInstance_2,configTIMER2_TICK);
-//    NRF_LOG_INFO("                           Timer2 %d",titck);
-//    NRF_LOG_FLUSH();
     return error_code;
 }
 
@@ -113,28 +106,15 @@ const nrfx_timer_t  xTimerInstance_3 = NRFX_TIMER_INSTANCE(configTIMER3_INSTANCE
 static void vTimerHandler_3(nrf_timer_event_t event_type, void* p_context)
 {
     if(event_type == NRF_TIMER_EVENT_COMPARE3)
-    {
-        BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+    { 
         //(1)时间 + 1ms
         if(G_MicroSecond < 999)
-            G_MicroSecond++;
+            G_MicroSecond = G_MicroSecond + 1;
         else
         {
             G_MicroSecond = 0;
-            G_GPSWeekSecond++;
-            
-            //整秒通知，测试
-//            if(G_SDCard_FileIsOpen == 1)
-//            {
-//                xTaskNotifyFromISR(xTaskHandle_GPS_RxData,    
-//                                    0,           
-//                                    eNoAction,
-//                                    &xHigherPriorityTaskWoken);            
-//                portYIELD_FROM_ISR(xHigherPriorityTaskWoken);  
-//            }
-            
+            G_GPSWeekSecond = G_GPSWeekSecond + 1;            
         }
-
     }
 }
 
