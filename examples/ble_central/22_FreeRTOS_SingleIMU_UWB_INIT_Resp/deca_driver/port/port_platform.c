@@ -125,10 +125,10 @@ int readfromspi(uint16 headerLength, const uint8 *headerBuffer, uint32 readlengt
   p1 += headerLength;
   memset(p1,0x00,readlength);
 
-//  spi_xfer_done = false;
+  spi_xfer_done = false;
   nrf_drv_spi_transfer(&spi, idatabuf, idatalength, itempbuf, idatalength);
-//  while(!spi_xfer_done)				
-//  ;
+  while(!spi_xfer_done)				
+  ;
 
   p1=itempbuf + headerLength;
 
@@ -156,10 +156,10 @@ int writetospi( uint16 headerLength, const uint8 *headerBuffer, uint32 bodylengt
   p1 += headerLength;
   memcpy(p1,bodyBuffer,bodylength);
   
-//  spi_xfer_done = false;
+  spi_xfer_done = false;
   nrf_drv_spi_transfer(&spi, idatabuf, idatalength, itempbuf, idatalength);
-//  while(!spi_xfer_done)
-//  ;
+  while(!spi_xfer_done)
+  ;
 
   return 0;
 } 
@@ -218,7 +218,7 @@ void port_set_dw1000_slowrate(void)
 {
 	nrf_drv_spi_config_t  spi_config = NRF_DRV_SPI_DEFAULT_CONFIG_2M(SPI_INSTANCE);
     spi_config.ss_pin = 17;
-	APP_ERROR_CHECK( nrf_drv_spi_init(&spi, &spi_config, NULL, NULL) );
+	APP_ERROR_CHECK( nrf_drv_spi_init(&spi, &spi_config, spi_event_handler, NULL) );
 	nrf_delay_ms(2);	
 }
 
@@ -231,7 +231,7 @@ void port_set_dw1000_fastrate(void)
     nrf_drv_spi_uninit(&spi);
 	nrf_drv_spi_config_t  spi_config = NRF_DRV_SPI_DEFAULT_CONFIG_8M(SPI_INSTANCE);
     spi_config.ss_pin = 17;
-	APP_ERROR_CHECK( nrf_drv_spi_init(&spi, &spi_config, NULL,NULL) );
+	APP_ERROR_CHECK( nrf_drv_spi_init(&spi, &spi_config, spi_event_handler,NULL) );
 	nrf_delay_ms(2);	
 }
 

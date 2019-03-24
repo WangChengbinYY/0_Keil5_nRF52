@@ -18,113 +18,13 @@
 
 #include "Leo_UART.h"
 #include "minmea.h"
-
+#include "nrf_drv_uart.h"
 
 extern TaskHandle_t    xTaskHandle_GPS_RxData; 
 extern uint8_t         G_SDCard_FileIsOpen;               //标记是否已经打开文件
 extern uint16_t        G_MicroSecond; 
-
-
-
-
-
-
-#define UART_RX_BUF_SIZE 128      
-#define UART_TX_BUF_SIZE 128
-
-
-
-//uint8_t G_Uart_Buffer1[UART_RX_BUF_SIZE];
-//uint8_t G_Uart_Buffer2[UART_RX_BUF_SIZE];
-//uint8_t G_Uart_Buffer_Number;
-
-//nrfx_uart_t   G_Uart_GPS = NRFX_UART_INSTANCE(0);
-
-
-//static void vUART_GPS_EventHandler(nrfx_uart_event_t const * p_event,void *p_context)
-//{
-//    switch (p_event->type)
-//    {
-//    	case NRFX_UART_EVT_RX_DONE:
-//            if(G_Uart_Buffer_Number == 1)
-//                G_Uart_Buffer_Number = 2;
-//            else
-//                G_Uart_Buffer_Number = 1;
-//            
-//            ucUART_GPS_RX();
-//            
-//            //收集到固定长度的字符
-//            NRF_LOG_INFO("                     Uart RX %d data",UART_RX_BUF_SIZE);
-//            NRF_LOG_FLUSH();  
-//        
-//    		break;
-//            
-//    	case NRFX_UART_EVT_ERROR:
-//            NRF_LOG_INFO("                     Uart RX error!!!!");
-//            NRF_LOG_FLUSH(); 
-//            ucUART_GPS_RX();
-//    		break;
-//    	default:
-//    		break;
-//    }
-//    
-//    
-//    
-//    if(p_event->type == NRFX_UART_EVT_RX_DONE)
-//    {
-//        if(G_Uart_Buffer_Number == 1)
-//            G_Uart_Buffer_Number = 2;
-//        else
-//            G_Uart_Buffer_Number = 1;
-//        
-//        //ucUART_GPS_RX();
-//        
-//        //收集到固定长度的字符
-//        NRF_LOG_INFO("                     Uart RX %d data",UART_RX_BUF_SIZE);
-//        NRF_LOG_FLUSH();  
-//        
-//    }
-//}
-//                                           
-
-///* GPS串口初始化
-// *    返回 0 成功；返回 1 失败  */    
-//uint8_t ucUART_GPS_Initial(void)
-//{
-//    uint8_t erro_code = 0;
-//    nrfx_uart_config_t tUartConfig =  NRFX_UART_DEFAULT_CONFIG;
-//    tUartConfig.pseltxd = configGPIO_UART_GPS_TXD;
-//    tUartConfig.pselrxd = configGPIO_UART_GPS_RXD;
-//    
-//    erro_code = nrfx_uart_init(&G_Uart_GPS,&tUartConfig,vUART_GPS_EventHandler);
-//    
-//    G_Uart_Buffer_Number = 1;
-//    
-//    return erro_code;  
-//}
-
-
-///* GPS串口接收字符
-// * @param[in] p_instance Pointer to the driver instance structure.
-// * @param[in] p_data     Pointer to data.
-// * @param[in] length     Number of bytes to receive.
-// *
-// * @retval    NRFX_SUCCESS If initialization was successful.
-// * @retval    NRFX_ERROR_BUSY If the driver is already receiving
-// *                            (and the secondary buffer has already been set
-// *                            in non-blocking mode).
-// * @retval    NRFX_ERROR_FORBIDDEN If the transfer was aborted from a different context
-// *                                (blocking mode only, also see @ref nrfx_uart_rx_disable).
-// * @retval    NRFX_ERROR_INTERNAL If UART peripheral reported an error.  */   
-//uint8_t ucUART_GPS_RX(void)
-//{
-//    if(G_Uart_Buffer_Number == 1)
-//        return nrfx_uart_rx(&G_Uart_GPS,G_Uart_Buffer1,UART_RX_BUF_SIZE);
-//    else
-//        return nrfx_uart_rx(&G_Uart_GPS,G_Uart_Buffer2,UART_RX_BUF_SIZE);
-//}
-
-
+extern uint8_t         G_Uart_Buffer1[configBufferUART_RX_SIZE];
+extern uint8_t         G_Uart_Buffer_Number;
 
 
 
@@ -133,25 +33,31 @@ extern uint16_t        G_MicroSecond;
 /* 串口回调函数 */
 static void vUART_GPS_EventHandler(app_uart_evt_t * p_event)
 {
-    uint16_t tTime = 0;
-    uint8_t mChar;
+    uint16_t tIsEnd = 0;
     switch (p_event->evt_type)
     {
-
-        case APP_UART_DATA_READY:
-//            if(G_SDCard_FileIsOpen == 1)
-//            {
-//                tTime =   G_MicroSecond;
-                
-            while(app_uart_get(&mChar) == NRF_SUCCESS)
-            ;
-//                BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-//                xTaskNotifyFromISR(xTaskHandle_GPS_RxData,0,eNoAction,&xHigherPriorityTaskWoken);            
-//                portYIELD_FROM_ISR(xHigherPriorityTaskWoken); 
-//            tTime = G_MicroSecond - tTime;
-//            NRF_LOG_INFO("                     Uart have data  %d",tTime );
-
-//            }
+//        case APP_UART_TX_EMPTY: 
+//                NRF_LOG_INFO("Uart tx complete!");
+//                NRF_LOG_FLUSH(); 
+//            break;
+        
+        case APP_UART_DATA_READY:                
+            while(app_uart_get(G_Uart_Buffer1+G_Uart_Buffer_Number) == NRF_SUCCESS)
+            {
+                if((char)(*(G_Uart_Buffer1+G_Uart_Buffer_Number)) == '\n')
+                    tIsEnd = 1;
+                G_Uart_Buffer_Number++;
+                if(G_Uart_Buffer_Number == configBufferUART_RX_SIZE)
+                    G_Uart_Buffer_Number = 0;
+            }
+            
+            if((G_SDCard_FileIsOpen == 1)&&(tIsEnd == 1))
+            {
+                tIsEnd = 0;
+                BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+                xTaskNotifyFromISR(xTaskHandle_GPS_RxData,0,eNoAction,&xHigherPriorityTaskWoken);            
+                portYIELD_FROM_ISR(xHigherPriorityTaskWoken); 
+            }
     		break;
     	default:
     		break;
@@ -176,12 +82,42 @@ uint8_t ucUARTInital_GPS(void)
     };
 
     APP_UART_FIFO_INIT(&comm_params,
-                         UART_RX_BUF_SIZE,      
-                         UART_TX_BUF_SIZE,
+                         256,      
+                         128,
                          vUART_GPS_EventHandler,
                          APP_IRQ_PRIORITY_LOW,
                          err_code);
-  
+    
+//    nrf_delay_ms(20);  
+//    uint8_t mGLL[16]={0xB5,0x62,0x06,0x01,0x08,0x00,0xF0,0x01,0x00,0x00,0x00,0x00,0x00,0x01,0x01,0x2B};
+//    uint8_t mGSA[16]={0xB5,0x62,0x06,0x01,0x08,0x00,0xF0,0x02,0x00,0x00,0x00,0x00,0x00,0x01,0x02,0x32};
+//    uint8_t mGSV[16]={0xB5,0x62,0x06,0x01,0x08,0x00,0xF0,0x03,0x00,0x00,0x00,0x00,0x00,0x01,0x03,0x39};
+//    uint8_t mRMC[16]={0xB5,0x62,0x06,0x01,0x08,0x00,0xF0,0x04,0x00,0x00,0x00,0x00,0x00,0x01,0x04,0x40};
+//    uint8_t mVTG[16]={0xB5,0x62,0x06,0x01,0x08,0x00,0xF0,0x05,0x00,0x00,0x00,0x00,0x00,0x01,0x05,0x47};
+//    uint8_t i = 0;
+//    
+//    err_code |= nrf_drv_uart_tx(&app_uart_inst, mGLL, 16);
+//    nrf_delay_ms(20);
+//    err_code |= nrf_drv_uart_tx(&app_uart_inst, mGSA, 16);
+//    nrf_delay_ms(20);
+//    err_code |= nrf_drv_uart_tx(&app_uart_inst, mGSV, 16);
+//    nrf_delay_ms(20);
+//    err_code |= nrf_drv_uart_tx(&app_uart_inst, mRMC, 16);
+//    nrf_delay_ms(20);
+//    err_code |= nrf_drv_uart_tx(&app_uart_inst, mVTG, 16);
+//    nrf_delay_ms(20);
+    
+//    for(i=0;i<16;i++)
+//        err_code |= app_uart_put(mGLL[i]);
+//    for(i=0;i<16;i++)
+//        err_code |= app_uart_put(mGSA[i]);    
+//    for(i=0;i<16;i++)
+//        err_code |= app_uart_put(mGSV[i]);
+//    for(i=0;i<16;i++)
+//        err_code |= app_uart_put(mRMC[i]);    
+//    for(i=0;i<16;i++)
+//        err_code |= app_uart_put(mVTG[i]); 
+
     return err_code;
 }    
     
@@ -227,13 +163,6 @@ void UTC2GPS(int year, int month, int day, int hour, int minute, int second, /*i
 }
 
 
-///**
-// * GPS数据解析  */
-//uint8_t ucGPSData_Decode(uint8_t * pData,uint8_t uNumber)
-//{
-//    enum minmea_sentence_id mGPS_Sentence_ID = minmea_sentence_id((char*)pData);   
-//    
-//                
-//}
+
 
 

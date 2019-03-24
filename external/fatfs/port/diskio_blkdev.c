@@ -110,20 +110,20 @@ DSTATUS disk_initialize(BYTE drv)
     }
 
     m_drives[drv].busy = true;
-//    ret_code_t err_code = nrf_blk_dev_init(m_drives[drv].config.p_block_device,
-//                                           block_dev_handler,
-//                                           (void *) (uint32_t) drv);
-    
     ret_code_t err_code = nrf_blk_dev_init(m_drives[drv].config.p_block_device,
-                                           NULL,
+                                           block_dev_handler,
                                            (void *) (uint32_t) drv);
+    
+//    ret_code_t err_code = nrf_blk_dev_init(m_drives[drv].config.p_block_device,
+//                                           NULL,
+//                                           (void *) (uint32_t) drv);
     
     if (err_code == NRF_SUCCESS)
     {
-//        while (m_drives[drv].busy)
-//        {
-//            m_drives[drv].config.wait_func();
-//        }
+        while (m_drives[drv].busy)
+        {
+            m_drives[drv].config.wait_func();
+        }
 
         if (m_drives[drv].last_result == NRF_BLOCK_DEV_RESULT_SUCCESS)
         {
@@ -166,10 +166,10 @@ DSTATUS disk_uninitialize(BYTE drv)
 
     if (ret == NRF_SUCCESS)
     {
-//        while (m_drives[drv].busy)
-//        {
-//            m_drives[drv].config.wait_func();
-//        }
+        while (m_drives[drv].busy)
+        {
+            m_drives[drv].config.wait_func();
+        }
     }
     if (m_drives[drv].last_result == NRF_BLOCK_DEV_RESULT_SUCCESS)
     {
@@ -216,10 +216,10 @@ DRESULT disk_read(BYTE drv, BYTE *buff, DWORD sector, UINT count)
 
     if (err_code == NRF_SUCCESS)
     {
-//        while (m_drives[drv].busy)
-//        {
-//            m_drives[drv].config.wait_func();
-//        }
+        while (m_drives[drv].busy)
+        {
+            m_drives[drv].config.wait_func();
+        }
 
         if (m_drives[drv].last_result == NRF_BLOCK_DEV_RESULT_SUCCESS)
         {
@@ -259,10 +259,10 @@ DRESULT disk_write(BYTE drv, const BYTE *buff, DWORD sector, UINT count)
     ret_code_t err_code = nrf_blk_dev_write_req(m_drives[drv].config.p_block_device, &req);
     if (err_code == NRF_SUCCESS)
     {
-//        while (m_drives[drv].busy)
-//        {
-//            m_drives[drv].config.wait_func();
-//        }
+        while (m_drives[drv].busy)
+        {
+            m_drives[drv].config.wait_func();
+        }
 
         if (m_drives[drv].last_result == NRF_BLOCK_DEV_RESULT_SUCCESS)
         {

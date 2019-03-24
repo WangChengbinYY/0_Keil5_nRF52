@@ -17,7 +17,7 @@
 #include "Leo_UWB.h"
 
 extern uint8_t			G_UWBData_IsReady;
-extern uint8_t			G_UWBData_IsComing;
+//extern uint8_t			G_UWBData_IsComing;
     
 /*=============================== 通用设定 ===================================*/
 /* Length of the common part of the message (up to and including the function code, see NOTE 1 below). */
@@ -299,14 +299,14 @@ uint8_t ucSS_INIT_RUN(uint16* pDistance,uint8_t* pNumber)
 //3.发送后，等待反馈
     /* We assume that the transmission is achieved correctly, poll for reception of a frame or error/timeout. See NOTE 4 below. */
     //SYS_STATUS_RXFCG 接收成功；SYS_STATUS_ALL_RX_TO 接收超时；SYS_STATUS_ALL_RX_ERR 接收错误
-    while(!G_UWBData_IsComing)
-    {
-        vTaskDelay(1);
-    }
-    G_UWBData_IsComing = 0;
-    status_reg = dwt_read32bitreg(SYS_STATUS_ID);
-//    while (!((status_reg = dwt_read32bitreg(SYS_STATUS_ID)) & (SYS_STATUS_RXFCG | SYS_STATUS_ALL_RX_TO | SYS_STATUS_ALL_RX_ERR)))
-//    {};    
+//    while(!G_UWBData_IsComing)
+//    {
+//        vTaskDelay(1);
+//    }
+////    G_UWBData_IsComing = 0;
+//    status_reg = dwt_read32bitreg(SYS_STATUS_ID);
+    while (!((status_reg = dwt_read32bitreg(SYS_STATUS_ID)) & (SYS_STATUS_RXFCG | SYS_STATUS_ALL_RX_TO | SYS_STATUS_ALL_RX_ERR)))
+    {};    
     
   
         

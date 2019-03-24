@@ -28,7 +28,7 @@
 extern uint8_t      G_SDCard_FileIsOpen;               //标记是否已经打开文件
 extern uint32_t     G_GPSWeekSecond;
 extern uint16_t     G_MicroSecond;
-extern uint8_t      G_UWBData_IsComing;
+//extern uint8_t      G_UWBData_IsComing;
 
 extern TaskHandle_t xTaskHandle_SDCard_Close;         /*SDCard 关闭文件任务  句柄 */
 extern TaskHandle_t xTaskHandle_UWB_EventHandler;    
@@ -60,17 +60,12 @@ static void vINTHandler_SDCard(nrfx_gpiote_pin_t pin, nrf_gpiote_polarity_t acti
                 G_SDCard_FileIsOpen = 0;
                 
                 //通知 关闭文件操作任务
-                xTaskNotifyFromISR(xTaskHandle_SDCard_Close,    
-                                    0,           
-                                    eNoAction,
-                                    &xHigherPriorityTaskWoken);            
+                xTaskNotifyFromISR(xTaskHandle_SDCard_Close,0,eNoAction,&xHigherPriorityTaskWoken);            
                 portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
             }
             
 
             //任务分析
-            NRF_LOG_INFO("TEST:   SDCard INT is ok!");
-            NRF_LOG_FLUSH();
             
             uint8_t pcWriteBuffer[300];
             NRF_LOG_INFO("=================================================");
@@ -183,8 +178,8 @@ uint8_t ucINTStart_SDCard(void)
 static void vINTHandler_PPS(nrfx_gpiote_pin_t pin, nrf_gpiote_polarity_t action)
 {
     //收到GPS 1PPS秒脉冲
-    G_GPSWeekSecond++;
-    G_MicroSecond = 0;
+//    G_GPSWeekSecond++;
+//    G_MicroSecond = 0;
     if(G_SDCard_FileIsOpen == 1)
     {
         nrf_gpio_pin_toggle(configGPIO_LED_R);
@@ -236,12 +231,9 @@ static void vINTHandler_UWB(nrfx_gpiote_pin_t pin, nrf_gpiote_polarity_t action)
     if(G_SDCard_FileIsOpen == 1)
     {
         BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-        xTaskNotifyFromISR(xTaskHandle_UWB_EventHandler,    
-                            0,           
-                            eNoAction,
-                            &xHigherPriorityTaskWoken);            
+        xTaskNotifyFromISR(xTaskHandle_UWB_EventHandler,0,eNoAction,&xHigherPriorityTaskWoken);            
         portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
-        G_UWBData_IsComing = 1;
+//        G_UWBData_IsComing = 1;
     }
 }
 
@@ -254,12 +246,6 @@ uint8_t ucINTInital_UWB(void)
 	uint8_t err_code;	
 	nrfx_gpiote_in_config_t in_config = NRFX_GPIOTE_CONFIG_IN_SENSE_LOTOHI(true);    	//上升沿有效
 	in_config.pull = NRF_GPIO_PIN_NOPULL;											    //下拉 常态低电平
-	
-//    if(!nrfx_gpiote_in_is_set(configGPIO_INT_UWB))
-//    {
-//        NRF_LOG_INFO("      UWB INIT GPIO is not set!");
-//        NRF_LOG_FLUSH();
-//    }
     
 	err_code = nrfx_gpiote_in_init(configGPIO_INT_UWB, &in_config, vINTHandler_UWB);	
 	return err_code;

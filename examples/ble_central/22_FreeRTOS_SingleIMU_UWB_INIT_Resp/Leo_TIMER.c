@@ -124,14 +124,14 @@ static void vTimerHandler_3(nrf_timer_event_t event_type, void* p_context)
             G_GPSWeekSecond++;
             
             //’˚√ÎÕ®÷™£¨≤‚ ‘
-            if(G_SDCard_FileIsOpen == 1)
-            {
-                xTaskNotifyFromISR(xTaskHandle_GPS_RxData,    
-                                    0,           
-                                    eNoAction,
-                                    &xHigherPriorityTaskWoken);            
-                portYIELD_FROM_ISR(xHigherPriorityTaskWoken);  
-            }
+//            if(G_SDCard_FileIsOpen == 1)
+//            {
+//                xTaskNotifyFromISR(xTaskHandle_GPS_RxData,    
+//                                    0,           
+//                                    eNoAction,
+//                                    &xHigherPriorityTaskWoken);            
+//                portYIELD_FROM_ISR(xHigherPriorityTaskWoken);  
+//            }
             
         }
 

@@ -22,8 +22,8 @@
 //全局变量_IMU数据采集的 SPI2 实例（UWB 用SPI0；SDCard 用SPI1；多IMU 复用SPI2） 
 nrf_drv_spi_t   SPI_CollectData = NRF_DRV_SPI_INSTANCE(configGPIO_SPI_CollectData_INSTANCE);	
 	
-extern uint8_t	        G_CollectData[512];                 //SDCard要储存数据的缓存
-extern uint16_t	        G_CollectData_Counter;    
+extern uint8_t	        G_CollectData1[512];                 //SDCard要储存数据的缓存
+extern uint16_t	        G_CollectData1_Counter;    
 extern uint8_t	        G_MAG_Coeffi[6]; 
 
 
@@ -269,8 +269,8 @@ uint8_t ucMPU9255_INIT(void)
 	nrf_delay_ms(3);	
     if(error_code == 0)
     {
-        memcpy(G_CollectData+G_CollectData_Counter,G_MAG_Coeffi,6);
-        G_CollectData_Counter = G_CollectData_Counter + 6;
+        memcpy(G_CollectData1+G_CollectData1_Counter,G_MAG_Coeffi,6);
+        G_CollectData1_Counter = G_CollectData1_Counter + 6;
         NRF_LOG_INFO("		AK8963 Config is ：0x%x %x %x",G_MAG_Coeffi[2],G_MAG_Coeffi[3],G_MAG_Coeffi[4]);
     }        
 	//试验 输出读出的 
