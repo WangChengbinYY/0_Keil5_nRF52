@@ -356,7 +356,7 @@ static void vTask_SDCard_Save(void *pvParameters)
                     NRF_LOG_RAW_INFO("%d   ",G_SDCard_CB_Counter);
             
                 G_SDCard_CB_Counter -= configSDCard_SaveSize;
-                erro_code = ucSDCard_SaveData(G_SDCard_CB_pLoad,configSDCard_SaveSize);
+                //erro_code = ucSDCard_SaveData(G_SDCard_CB_pLoad,configSDCard_SaveSize);
 
                 if(erro_code != 0)
                 {
@@ -825,43 +825,43 @@ static void vTask_TaskStart(void *pvParameters)
     NRF_LOG_FLUSH();    
     
     //（3） 初始化SDCard 并建立存储文件  
-    erro_code |= ucSDCard_INIT();  
-    if(erro_code == 0)
-    {
+//    erro_code |= ucSDCard_INIT();  
+//    if(erro_code == 0)
+//    {
         G_SDCard_FileIsOpen = 1;
-    }
-    NRF_LOG_INFO(("||Initialize||-->SDCard--------->error  0x%x"),erro_code);
-    NRF_LOG_FLUSH(); 
+//    }
+//    NRF_LOG_INFO(("||Initialize||-->SDCard--------->error  0x%x"),erro_code);
+//    NRF_LOG_FLUSH(); 
  
     //（4） 初始化 IMU 
-    //初始化 IMUA(U4) MPU92  里面包含了(1)初始化两个MPU9255,(2) ADIS
-    erro_code |= ucIMU_INIT_MPU_ADIS();           
-    
-    //初始化 IMUB(U5) MTi
-#if configIMU_MPU92_MTi
+//    //初始化 IMUA(U4) MPU92  里面包含了(1)初始化两个MPU9255,(2) ADIS
+//    erro_code |= ucIMU_INIT_MPU_ADIS();           
+//    
+//    //初始化 IMUB(U5) MTi
+//#if configIMU_MPU92_MTi
 
-#endif
-    NRF_LOG_INFO(("||Initialize||-->IMU------------>error  0x%x"),erro_code);    
-    
-    //（5） 初始化 SAADC 压力传感器
-    erro_code |= ucSAADCInitial();
-    NRF_LOG_INFO(("||Initialize||-->SAADC----------->error  0x%x"),erro_code); 
-    NRF_LOG_FLUSH(); 
+//#endif
+//    NRF_LOG_INFO(("||Initialize||-->IMU------------>error  0x%x"),erro_code);    
+//    
+//    //（5） 初始化 SAADC 压力传感器
+//    erro_code |= ucSAADCInitial();
+//    NRF_LOG_INFO(("||Initialize||-->SAADC----------->error  0x%x"),erro_code); 
+//    NRF_LOG_FLUSH(); 
     
     //（6）初始化 UWB
-#if configUWB_INIT
-    erro_code |= ucSS_INIT_Initial();
-#else
-    erro_code |= ucSS_RESP_Initial();
-#endif
-    NRF_LOG_INFO(("||Initialize||-->UWB------------->error  0x%x"),erro_code);     
-    NRF_LOG_FLUSH(); 
+//#if configUWB_INIT
+//    erro_code |= ucSS_INIT_Initial();
+//#else
+//    erro_code |= ucSS_RESP_Initial();
+//#endif
+//    NRF_LOG_INFO(("||Initialize||-->UWB------------->error  0x%x"),erro_code);     
+//    NRF_LOG_FLUSH(); 
     
     //（7）初始化计时器并启动
-#if configUWB_INIT    
-    erro_code |= ucTimerInitial_2();        //10ms 触发，UWB测距启动
-    erro_code |= ucTimerStart_2();    
-#endif    
+//#if configUWB_INIT    
+//    erro_code |= ucTimerInitial_2();        //10ms 触发，UWB测距启动
+//    erro_code |= ucTimerStart_2();    
+//#endif    
     erro_code |= ucTimerInitial_3();        //1ms 计时 
     erro_code |= ucTimerStart_3();      
     
@@ -874,14 +874,14 @@ static void vTask_TaskStart(void *pvParameters)
     //（8）初始化中断并启动
     erro_code |= ucINTInital_SDCard();    /* SDCard中断管脚初始化 */    
     erro_code |= ucINTInital_PPS();       /* 1PPS秒脉冲中断管脚初始化 */
-    erro_code |= ucINTInital_UWB();
+//    erro_code |= ucINTInital_UWB();
     erro_code |= ucINTInital_IMUA();
-    erro_code |= ucINTInital_IMUB();
+//    erro_code |= ucINTInital_IMUB();
     ucINTStart_SDCard();
     ucINTStart_PPS();
-    ucINTStart_UWB();
-//    ucINTStart_IMUA(); 
-    ucINTStart_IMUB();
+//    ucINTStart_UWB();
+    ucINTStart_IMUA(); 
+//    ucINTStart_IMUB();
     NRF_LOG_INFO(("||Initialize||-->INT----------->error  0x%x"),erro_code);   
     NRF_LOG_FLUSH(); 
     

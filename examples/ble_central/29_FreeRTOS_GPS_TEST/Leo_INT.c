@@ -53,16 +53,16 @@ static void vINTHandler_SDCard(nrfx_gpiote_pin_t pin, nrf_gpiote_polarity_t acti
         nrf_delay_ms(100);
         if(nrf_gpio_pin_read(configGPIO_INT_SDCard) == 0)
         {
-            if(G_SDCard_FileIsOpen == 1)
-            {
-                //标志位 清零
-                G_SDCard_FileIsOpen = 0;
-                NRF_LOG_INFO("Close SDCard File!");
-                NRF_LOG_FLUSH(); 
-                //通知 关闭文件操作任务
-                xTaskNotifyFromISR(xTaskHandle_SDCard_Close,0,eNoAction,&xHigherPriorityTaskWoken);            
-                portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
-            }
+//            if(G_SDCard_FileIsOpen == 1)
+//            {
+//                //标志位 清零
+//                G_SDCard_FileIsOpen = 0;
+//                NRF_LOG_INFO("Close SDCard File!");
+//                NRF_LOG_FLUSH(); 
+//                //通知 关闭文件操作任务
+//                xTaskNotifyFromISR(xTaskHandle_SDCard_Close,0,eNoAction,&xHigherPriorityTaskWoken);            
+//                portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+//            }
             
 
             //任务分析
@@ -134,11 +134,11 @@ static void vINTHandler_IMUA(nrfx_gpiote_pin_t pin, nrf_gpiote_polarity_t actio)
         BaseType_t xReturn = pdPASS;
         xReturn = xTaskNotifyFromISR(xTaskHandle_CollectData_IMUA,0,eSetValueWithoutOverwrite,&xHigherPriorityTaskWoken);
         portYIELD_FROM_ISR(xHigherPriorityTaskWoken);  
-        if(xReturn == pdFAIL)
-        {
-            NRF_LOG_INFO("     MessageOverFlow_____vTask_IMUA_Collect");
-            NRF_LOG_FLUSH(); 
-        }    
+//        if(xReturn == pdFAIL)
+//        {
+//            NRF_LOG_INFO("     MessageOverFlow_____vTask_IMUA_Collect");
+//            NRF_LOG_FLUSH(); 
+//        }    
     }
 }
 
@@ -182,18 +182,18 @@ static void vINTHandler_IMUB(nrfx_gpiote_pin_t pin, nrf_gpiote_polarity_t actio)
     if(G_SDCard_FileIsOpen == 1)
     {
 //          //TEST
-        NRF_LOG_INFO(" IMUB INT is coming ms%d",G_MicroSecond);
-        NRF_LOG_FLUSH();  
+//        NRF_LOG_INFO(" IMUB INT is coming ms%d",G_MicroSecond);
+//        NRF_LOG_FLUSH();  
         
         //通知任务进行数据采集
-        BaseType_t xReturn = pdPASS;
-        xReturn = xTaskNotifyFromISR(xTaskHandle_CollectData_IMUB,0,eSetValueWithoutOverwrite,&xHigherPriorityTaskWoken);
-        portYIELD_FROM_ISR(xHigherPriorityTaskWoken);  
-        if(xReturn == pdFAIL)
-        {
-            NRF_LOG_INFO("     MessageOverFlow_____vTask_IMUB_Collect  ms %d",G_MicroSecond);
-            NRF_LOG_FLUSH(); 
-        }        
+//        BaseType_t xReturn = pdPASS;
+//        xReturn = xTaskNotifyFromISR(xTaskHandle_CollectData_IMUB,0,eSetValueWithoutOverwrite,&xHigherPriorityTaskWoken);
+//        portYIELD_FROM_ISR(xHigherPriorityTaskWoken);  
+//        if(xReturn == pdFAIL)
+//        {
+//            NRF_LOG_INFO("     MessageOverFlow_____vTask_IMUB_Collect  ms %d",G_MicroSecond);
+//            NRF_LOG_FLUSH(); 
+//        }        
     }
 }
 
