@@ -28,9 +28,6 @@
 extern uint8_t      G_SDCard_FileIsOpen;               //标记是否已经打开文件
 extern uint32_t     G_GPSWeekSecond;
 extern uint16_t     G_MicroSecond;
-extern uint8_t	    G_IMU_Data_B_ADIS[25]; 
-extern uint8_t	    G_IMU_Data_B_MPU[31]; 
-extern uint8_t      G_FOOTPresure[17];
 
 extern TaskHandle_t xTaskHandle_SDCard_Close;         /*SDCard 关闭文件任务  句柄 */
 extern TaskHandle_t xTaskHandle_UWB_EventHandler;    
@@ -185,32 +182,18 @@ static void vINTHandler_IMUB(nrfx_gpiote_pin_t pin, nrf_gpiote_polarity_t actio)
     if(G_SDCard_FileIsOpen == 1)
     {
 //          //TEST
-//        NRF_LOG_INFO(" IMUB INT is coming ms%d",G_MicroSecond);
-//        NRF_LOG_FLUSH();  
-        
-        //记录时间
-#if configIMU_MPU92_MPU92        
-        memcpy(G_IMU_Data_B_MPU+2,&G_GPSWeekSecond,sizeof(G_GPSWeekSecond)); 
-        memcpy(G_IMU_Data_B_MPU+6,&G_MicroSecond,sizeof(G_MicroSecond)); 
-#endif        
-        
-#if configIMU_MPU92_ADIS
-        memcpy(G_IMU_Data_B_ADIS+2,&G_GPSWeekSecond,sizeof(G_GPSWeekSecond)); 
-        memcpy(G_IMU_Data_B_ADIS+6,&G_MicroSecond,sizeof(G_MicroSecond));      
-#endif     
-        
-        memcpy(G_FOOTPresure+2,&G_GPSWeekSecond,sizeof(G_GPSWeekSecond));
-        memcpy(G_FOOTPresure+6,&G_MicroSecond,sizeof(G_MicroSecond));  
+        NRF_LOG_INFO(" IMUB INT is coming ms%d",G_MicroSecond);
+        NRF_LOG_FLUSH();  
         
         //通知任务进行数据采集
-        BaseType_t xReturn = pdPASS;
-        xReturn = xTaskNotifyFromISR(xTaskHandle_CollectData_IMUB,0,eSetValueWithoutOverwrite,&xHigherPriorityTaskWoken);
-        portYIELD_FROM_ISR(xHigherPriorityTaskWoken);  
-        if(xReturn == pdFAIL)
-        {
-            NRF_LOG_INFO("     MessageOverFlow_____vTask_IMUB_Collect  ms %d",G_MicroSecond);
-            NRF_LOG_FLUSH(); 
-        }        
+//        BaseType_t xReturn = pdPASS;
+//        xReturn = xTaskNotifyFromISR(xTaskHandle_CollectData_IMUB,0,eSetValueWithoutOverwrite,&xHigherPriorityTaskWoken);
+//        portYIELD_FROM_ISR(xHigherPriorityTaskWoken);  
+//        if(xReturn == pdFAIL)
+//        {
+//            NRF_LOG_INFO("     MessageOverFlow_____vTask_IMUB_Collect  ms %d",G_MicroSecond);
+//            NRF_LOG_FLUSH(); 
+//        }        
     }
 }
 
@@ -255,12 +238,12 @@ uint8_t ucINTStart_IMUB(void)
 static void vINTHandler_PPS(nrfx_gpiote_pin_t pin, nrf_gpiote_polarity_t action)
 {
     //收到GPS 1PPS秒脉冲
+    //G_GPSWeekSecond++;
     G_MicroSecond = 0;
     if(G_SDCard_FileIsOpen == 1)
     {
         nrf_gpio_pin_toggle(configGPIO_LED_R);
-    }            
-
+    }
 }
 
 
@@ -270,7 +253,7 @@ static void vINTHandler_PPS(nrfx_gpiote_pin_t pin, nrf_gpiote_polarity_t action)
 uint8_t ucINTInital_PPS(void)
 {	
 	uint8_t err_code;	
-	nrfx_gpiote_in_config_t in_config = NRFX_GPIOTE_CONFIG_IN_SENSE_LOTOHI(true);    	//上升沿有效
+	nrfx_gpiote_in_config_t in_config = NRFX_GPIOTE_CONFIG_IN_SENSE_HITOLO(true);    	//上升沿有效
 	in_config.pull = NRF_GPIO_PIN_PULLDOWN;											    //下拉 常态低电平
 	
 	err_code = nrfx_gpiote_in_init(configGPIO_INT_GPSPPS, &in_config, vINTHandler_PPS);	

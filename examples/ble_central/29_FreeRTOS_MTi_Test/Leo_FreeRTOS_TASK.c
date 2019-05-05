@@ -65,6 +65,7 @@ uint16_t    G_SDCard_CB_Counter;
 #define taskPRIO_SDCard_Close                0          //SDCard关闭文件成功  标志位置0  数据不会存储
 
 /* 1级 */
+//SDCard 循环存储
 #define taskPRIO_SDCard_Save                 1          //SDCard存储数据 
 
 /* 2级 */
@@ -453,7 +454,7 @@ static void vTask_GPSData_Decode(void *pvParameters)
  *------------------------------------------------------------*/
 static void vTask_CollectData_IMUA(void *pvParameters)
 {
-    uint8_t error_IMUAData = 0;
+    uint8_t error_IMUADAta = 0;
     while(1)
     {
         xTaskNotifyWait(0x00000000,0xFFFFFFFF,NULL,portMAX_DELAY);               
@@ -473,13 +474,13 @@ static void vTask_CollectData_IMUA(void *pvParameters)
                 
                 //采集IMU_A 的数据
                 //问题：没有判断采集数据的正确性!
-                error_IMUAData = Leo_MPU9255_Read_ALLData(G_IMU_Data_A+8);
+                error_IMUADAta = Leo_MPU9255_Read_ALLData(G_IMU_Data_A+8);
                 
                 //关闭IMU_A nCS管脚
                 nrfx_gpiote_out_set(configGPIO_SPI_IMUA_nCS);               
                 nrf_delay_us(10); 
                 
-                if(error_IMUAData == 0)
+                if(error_IMUADAta == 0)
                 {
                     G_IMU_Data_A_IsReady = 1;
                 }else
@@ -523,6 +524,9 @@ static void vTask_CollectData_IMUB(void *pvParameters)
             //采集 IMU_B 数据
 #if configIMU_MPU92_MPU92
             //IMU_B   MPU92
+            //记录时间
+            memcpy(G_IMU_Data_B_MPU+2,&G_GPSWeekSecond,sizeof(G_GPSWeekSecond)); 
+            memcpy(G_IMU_Data_B_MPU+6,&G_MicroSecond,sizeof(G_MicroSecond)); 
 //            erro_code |= Leo_MPU9255_Read_ACC(G_IMU_Data_B_MPU+8);
 //            erro_code |= Leo_MPU9255_Read_Gyro(G_IMU_Data_B_MPU+14);
 //            erro_code |= Leo_MPU9255_Read_Magnetic(G_IMU_Data_B_MPU+20);
@@ -553,7 +557,9 @@ static void vTask_CollectData_IMUB(void *pvParameters)
         nrfx_saadc_sample_convert(1,tSAResult+1);        
         nrfx_saadc_sample_convert(2,tSAResult+2);  
         nrfx_saadc_sample_convert(3,tSAResult+3);    
-        //问题：没有判断采集数据的正确性!          
+        //问题：没有判断采集数据的正确性!
+        memcpy(G_FOOTPresure+2,&G_GPSWeekSecond,sizeof(G_GPSWeekSecond));
+        memcpy(G_FOOTPresure+6,&G_MicroSecond,sizeof(G_MicroSecond));            
         memcpy(G_FOOTPresure+8,tSAResult,sizeof(tSAResult)); 
             
 //3. 进入存储判断       
@@ -830,7 +836,8 @@ static void vTask_TaskStart(void *pvParameters)
  
     //（4） 初始化 IMU 
     //初始化 IMUA(U4) MPU92  里面包含了(1)初始化两个MPU9255,(2) ADIS
-    erro_code |= ucIMU_INIT_MPU_ADIS();           
+    erro_code |= ucIMU_INIT_MPU_ADIS();
+           
     
     //初始化 IMUB(U5) MTi
 #if configIMU_MPU92_MTi
@@ -860,8 +867,8 @@ static void vTask_TaskStart(void *pvParameters)
     erro_code |= ucTimerInitial_3();        //1ms 计时 
     erro_code |= ucTimerStart_3();      
     
-//    erro_code |= ucTimerInitial_4();        //FreeRTOS 任务分析用
-//    erro_code |= ucTimerStart_4();
+    erro_code |= ucTimerInitial_4();        //FreeRTOS 任务分析用
+    erro_code |= ucTimerStart_4();
      
     NRF_LOG_INFO(("||Initialize||-->TIMER---------->error  0x%x"),erro_code);
     NRF_LOG_FLUSH(); 

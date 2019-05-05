@@ -254,14 +254,14 @@
 /* IMU   传感器配置种类 */
 #define configIMU_MPU92                             0                  //IMU器件选择单个MPU9250(U4 IMUA)
 #define configIMU_MPU92_MPU92                       0                  //IMU器件选择MPU9250(U4 IMUA) + MPU9250(U5 IMUB)
-#define configIMU_MPU92_MTi                         0                  //IMU器件选择MPU9250(U4 IMUA) + MTi(U5 IMUB)
-#define configIMU_MPU92_ADIS                        1                  //IMU器件选择MPU9250(U4 IMUA) + ADIS(U5 IMUB)
+#define configIMU_MPU92_MTi                         1                  //IMU器件选择MPU9250(U4 IMUA) + MTi(U5 IMUB)
+#define configIMU_MPU92_ADIS                        0                  //IMU器件选择MPU9250(U4 IMUA) + ADIS(U5 IMUB)
 #if ((configIMU_MPU92 + configIMU_MPU92_MPU92 + configIMU_MPU92_MTi + configIMU_MPU92_ADIS) != 1)
     #error "The configIMU Choose is Wrong!"
 #endif
 
 // UWB   类型设定
-#define configUWB_INIT                              0                   /* 发起者：1；响应者：0 */
+#define configUWB_INIT                              1                   /* 发起者：1；响应者：0 */
 
 //--------管脚定义-----------------
 
