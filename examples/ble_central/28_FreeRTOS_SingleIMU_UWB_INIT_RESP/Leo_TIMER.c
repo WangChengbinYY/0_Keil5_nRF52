@@ -23,6 +23,8 @@
 
 extern uint16_t    G_MicroSecond;
 extern uint32_t    G_GPSWeekSecond;
+extern uint8_t     G_GPSTime_IsValid;
+
 extern uint8_t     G_SDCard_FileIsOpen;
 extern TaskHandle_t    xTaskHandle_UWB_Start;         /*5ms触发的采集任务    句柄 */
 //extern TaskHandle_t    xTaskHandle_GPS_RxData;

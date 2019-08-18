@@ -40,6 +40,7 @@ uint8_t     G_FOOTPresure[17];
 //全局变量_GPS定位数据
 uint8_t     G_GPSData[41];
 uint8_t     G_GPSData_IsReady;
+uint8_t     G_GPSTime_IsValid;
 
 //全局变量_UWB测距数据
 uint8_t     G_UWBData[12];
@@ -155,7 +156,7 @@ void vINIT_Variable(void)
     G_GPSData[1] = 0xD1;
     G_GPSData[40] = 0xFF;  
     G_GPSData_IsReady = 0;
-    
+    G_GPSTime_IsValid = 0;
     //全局变量_UWB测距数据
     memset(G_UWBData,0,12);
     G_UWBData[0] = 0xE1;
@@ -255,11 +256,11 @@ static void vTask_UWB_EventHandler(void *pvParameters)
                 if(error_code_UWB == 0)
                 {
                     //TEST 
-                    if((G_MicroSecond%200)==0)
-                    {
-                        NRF_LOG_INFO("UWB is OK!");
-                        NRF_LOG_FLUSH(); 
-                    }
+//                    if((G_MicroSecond%200)==0)
+//                    {
+//                        NRF_LOG_INFO("UWB is OK!");
+//                        NRF_LOG_FLUSH(); 
+//                    }
                     
                     memcpy(G_UWBData+2,&G_GPSWeekSecond,sizeof(G_GPSWeekSecond)); 
                     memcpy(G_UWBData+6,&G_MicroSecond,sizeof(G_MicroSecond));  
@@ -440,6 +441,7 @@ static void vTask_GPSData_Decode(void *pvParameters)
                         memcpy(G_GPSData+36,&mGGA.hdop.scale,sizeof(mGGA.hdop.scale));
 
                         G_GPSData_IsReady = 1;
+                        G_GPSTime_IsValid = 1;
                     }
                 }
                 

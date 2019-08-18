@@ -255,7 +255,10 @@ uint8_t ucINTStart_IMUB(void)
 static void vINTHandler_PPS(nrfx_gpiote_pin_t pin, nrf_gpiote_polarity_t action)
 {
     //ÊÕµ½GPS 1PPSÃëÂö³å
+    if(G_MicroSecond > 800)
+        G_GPSWeekSecond ++;
     G_MicroSecond = 0;
+    
     if(G_SDCard_FileIsOpen == 1)
     {
         nrf_gpio_pin_toggle(configGPIO_LED_R);
