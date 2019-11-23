@@ -415,15 +415,37 @@ static void vTask_GPSData_Decode(void *pvParameters)
                         memcpy(G_GPSData+10,&mHigh,sizeof(mHigh));
                         memcpy(G_GPSData+12,&mHDop,sizeof(mHDop));
                         
-                        if((sizeof(G_GPSData)+G_SDCard_CB_Counter) <= configSDCard_BufferSize)
-                        {
-                            ucCircleBuffer_SaveData(G_GPSData,sizeof(G_GPSData));  
-                        }else
-                        {
-                            //丢包
-                            NRF_LOG_INFO("  SDCard Buffer is OverFlow_G_GPSData!");
-                            NRF_LOG_FLUSH();
-                        } 
+                        if(xSemaphoreTake( xMutex_SDCard_CirBuffer, ( TickType_t ) 50 ) == pdTRUE)
+                        {      
+                            //先存储时间数据
+                            if(G_Time_Seconds_IsReady == 1)
+                            {
+                                //防止缓存溢出   
+                                if((sizeof(G_Time_Seconds)+G_SDCard_CB_Counter) <= configSDCard_BufferSize)
+                                {
+                                    ucCircleBuffer_SaveData(G_Time_Seconds,sizeof(G_Time_Seconds));  
+                                    G_Time_Seconds_IsReady = 0;
+                                }else
+                                {
+                                    //丢包
+                                    NRF_LOG_INFO("  SDCard Buffer is OverFlow_G_Time_Seconds!");
+                                    NRF_LOG_FLUSH();
+                                } 
+                            }
+                        
+                        
+                            if((sizeof(G_GPSData)+G_SDCard_CB_Counter) <= configSDCard_BufferSize)
+                            {
+                                ucCircleBuffer_SaveData(G_GPSData,sizeof(G_GPSData));                                     
+                            }else
+                            {
+                                //丢包
+                                NRF_LOG_INFO("  SDCard Buffer is OverFlow_G_GPSData!");
+                                NRF_LOG_FLUSH();
+                            }                         
+                        
+                            xSemaphoreGive( xMutex_SDCard_CirBuffer ); 
+                        }
                     }
                 }
                 
