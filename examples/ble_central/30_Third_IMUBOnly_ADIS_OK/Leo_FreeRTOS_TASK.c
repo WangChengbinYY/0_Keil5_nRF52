@@ -410,43 +410,44 @@ static void vTask_GPSData_Decode(void *pvParameters)
                         if(xSemaphoreTake( xMutex_SDCard_CirBuffer, ( TickType_t ) 50 ) == pdTRUE)
                         {      
                             G_GPSWeekSecond = mGGA.time.hours*3600+mGGA.time.minutes*60+mGGA.time.seconds;
+                            
+                            //第一次获取GPS时间  直接存储时间数据                          
                             if(G_GPSWeekSecond_IsValid == 0)
                             {
-                                //第一次获取GPS时间
                                 G_GPSWeekSecond_IsValid = 1;
                                 //直接存储当前GPS时间
                                 memcpy(G_Time_Seconds+2,&G_GPSWeekSecond,sizeof(G_GPSWeekSecond)); 
                                 ucCircleBuffer_SaveData(G_Time_Seconds,sizeof(G_Time_Seconds));  
                                 G_Time_Seconds_IsReady = 0;   
-                            }else
+                            }
+
+                            //不是第一次获取GPS时间，先判断是否需要存储时间数据
+                            if(G_Time_Seconds_IsReady == 1)
                             {
-                                //先存储时间数据
-                                if(G_Time_Seconds_IsReady == 1)
+                                //防止缓存溢出   
+                                if((sizeof(G_Time_Seconds)+G_SDCard_CB_Counter) <= configSDCard_BufferSize)
                                 {
-                                    //防止缓存溢出   
-                                    if((sizeof(G_Time_Seconds)+G_SDCard_CB_Counter) <= configSDCard_BufferSize)
-                                    {
-                                        ucCircleBuffer_SaveData(G_Time_Seconds,sizeof(G_Time_Seconds));  
-                                        G_Time_Seconds_IsReady = 0;
-                                    }else
-                                    {
-                                        //丢包
-                                        NRF_LOG_INFO("  SDCard Buffer is OverFlow_G_Time_Seconds!");
-                                        NRF_LOG_FLUSH();
-                                    } 
-                                }                            
-                            
-                                if((sizeof(G_GPSData)+G_SDCard_CB_Counter) <= configSDCard_BufferSize)
-                                {
-                                    ucCircleBuffer_SaveData(G_GPSData,sizeof(G_GPSData));                                     
+                                    ucCircleBuffer_SaveData(G_Time_Seconds,sizeof(G_Time_Seconds));  
+                                    G_Time_Seconds_IsReady = 0;
                                 }else
                                 {
                                     //丢包
-                                    NRF_LOG_INFO("  SDCard Buffer is OverFlow_G_GPSData!");
+                                    NRF_LOG_INFO("  SDCard Buffer is OverFlow_G_Time_Seconds!");
                                     NRF_LOG_FLUSH();
                                 } 
-                                
-                            }   
+                            }                            
+                        
+                            //再存储GPS数据
+                            if((sizeof(G_GPSData)+G_SDCard_CB_Counter) <= configSDCard_BufferSize)
+                            {
+                                ucCircleBuffer_SaveData(G_GPSData,sizeof(G_GPSData));                                     
+                            }else
+                            {
+                                //丢包
+                                NRF_LOG_INFO("  SDCard Buffer is OverFlow_G_GPSData!");
+                                NRF_LOG_FLUSH();
+                            }                                 
+  
                             xSemaphoreGive( xMutex_SDCard_CirBuffer ); 
                         }
                     }else
@@ -459,6 +460,7 @@ static void vTask_GPSData_Decode(void *pvParameters)
         }
     }
 }
+
 
 
 /*------------------------------------------------------------
