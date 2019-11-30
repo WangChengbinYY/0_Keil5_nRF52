@@ -24,8 +24,8 @@
 extern uint16_t    G_MicroSecond;
 extern uint32_t    G_GPSWeekSecond;
 
-extern uint8_t	    G_Time_Seconds[7]; 
-extern uint8_t	    G_Time_Seconds_IsReady;
+extern uint8_t	    G_A0A0_Time_Seconds[7]; 
+extern uint8_t	    G_A0A0_Time_Seconds_IsReady;
 
 extern uint8_t     G_SDCard_FileIsOpen;
 extern TaskHandle_t    xTaskHandle_UWB_Start;         /*5ms触发的采集任务    句柄 */
@@ -126,9 +126,9 @@ static void vTimerHandler_3(nrf_timer_event_t event_type, void* p_context)
             G_MicroSecond = 0;
             G_GPSWeekSecond = G_GPSWeekSecond + 1;     
 
-            G_Time_Seconds_IsReady = 1;
-            G_Time_Seconds[6] = 0;     //计数器的整秒计数            
-            memcpy(G_Time_Seconds+2,&G_GPSWeekSecond,sizeof(G_GPSWeekSecond));            
+            G_A0A0_Time_Seconds_IsReady = 1;
+            G_A0A0_Time_Seconds[6] = 0;     //计数器的整秒计数            
+            memcpy(G_A0A0_Time_Seconds+2,&G_GPSWeekSecond,sizeof(G_GPSWeekSecond));            
         }
     }
 }

@@ -22,7 +22,7 @@
 //全局变量_IMU数据采集的 SPI2 实例（UWB 用SPI0；SDCard 用SPI1；多IMU 复用SPI2） 
 nrf_drv_spi_t   SPI_CollectData = NRF_DRV_SPI_INSTANCE(configGPIO_SPI_CollectData_INSTANCE);	
 
-extern uint8_t	        G_MAG_Coeffi[5]; 
+extern uint8_t	        G_A1A1_A2A2_MAG_Coeffi[5]; 
 
 static uint8_t          G_MPU9255_SPI_xfer_Done = 1; 
 
@@ -270,11 +270,11 @@ uint8_t Leo_MPU9255_INIT(void)
 	nrf_delay_ms(10);	
 		
 	//读取磁强计数值修正参数 
-	error_code |=Leo_MPU9255_AK8963_SPI_ReadBytes(MPU9255_AK8963_ASAX,&G_MAG_Coeffi[2],3);    
+	error_code |=Leo_MPU9255_AK8963_SPI_ReadBytes(MPU9255_AK8963_ASAX,&G_A1A1_A2A2_MAG_Coeffi[2],3);    
 	nrf_delay_ms(3);	
     if(error_code == 0)
     {
-        NRF_LOG_INFO("		AK8963 Config is:0x%x %x %x",G_MAG_Coeffi[2],G_MAG_Coeffi[3],G_MAG_Coeffi[4]);
+        NRF_LOG_INFO("		AK8963 Config is:0x%x %x %x",G_A1A1_A2A2_MAG_Coeffi[2],G_A1A1_A2A2_MAG_Coeffi[3],G_A1A1_A2A2_MAG_Coeffi[4]);
         NRF_LOG_FLUSH();
     }        
 	//试验 输出读出的 
@@ -507,9 +507,11 @@ uint8_t ucIMU_INIT_IMUA_MPU_and_IMUB_ADIS(void)
     nrf_delay_ms(2);       
     
     //3.初始化 IMUA(MPU9250)
+    G_A1A1_A2A2_MAG_Coeffi[0] = 0xA1;     //IMUA的磁强计校正参数
+    G_A1A1_A2A2_MAG_Coeffi[1] = 0xA1;    
     error_code |= Leo_MPU9255_INIT();    
-    //记录磁强计参数
-    ucCircleBuffer_SaveData(G_MAG_Coeffi,sizeof(G_MAG_Coeffi));  
+    //记录磁强计参数    
+    ucCircleBuffer_SaveData(G_A1A1_A2A2_MAG_Coeffi,sizeof(G_A1A1_A2A2_MAG_Coeffi));  
     NRF_LOG_INFO(("||Initialize||-->IMU_A(U4)------->error  0x%x"),error_code);  
     
     //4.卸载SPI 并拉高 IMUA片选   
@@ -559,10 +561,10 @@ uint8_t ucIMU_INIT_IMUAB_MPU(void)
     nrf_delay_ms(2);       
     
     //1.3 初始化 IMUA(MPU9250)
-    G_MAG_Coeffi[0] = 0xC1;     //IMUA的磁强计校正参数
-    G_MAG_Coeffi[1] = 0xC1;
+    G_A1A1_A2A2_MAG_Coeffi[0] = 0xA1;     //IMUA的磁强计校正参数
+    G_A1A1_A2A2_MAG_Coeffi[1] = 0xA1;
     error_code |= Leo_MPU9255_INIT();        
-    ucCircleBuffer_SaveData(G_MAG_Coeffi,sizeof(G_MAG_Coeffi));     //记录磁强计参数
+    ucCircleBuffer_SaveData(G_A1A1_A2A2_MAG_Coeffi,sizeof(G_A1A1_A2A2_MAG_Coeffi));     //记录磁强计参数
     NRF_LOG_INFO(("||Initialize||-->IMU_A(MPU)------>error  0x%x"),error_code);  
     
     //1.4 卸载SPI 并拉高 IMUA片选
@@ -582,10 +584,10 @@ uint8_t ucIMU_INIT_IMUAB_MPU(void)
     nrf_delay_ms(2);
     
     //2.3 初始化 IMUB
-    G_MAG_Coeffi[0] = 0xC2;     //IMUB的磁强计校正参数
-    G_MAG_Coeffi[1] = 0xC2;
+    G_A1A1_A2A2_MAG_Coeffi[0] = 0xA2;     //IMUB的磁强计校正参数
+    G_A1A1_A2A2_MAG_Coeffi[1] = 0xA2;
     error_code |= Leo_MPU9255_INIT();        
-    ucCircleBuffer_SaveData(G_MAG_Coeffi,sizeof(G_MAG_Coeffi));     //记录磁强计参数
+    ucCircleBuffer_SaveData(G_A1A1_A2A2_MAG_Coeffi,sizeof(G_A1A1_A2A2_MAG_Coeffi));     //记录磁强计参数
     NRF_LOG_INFO(("||Initialize||-->IMU_B(MPU)------>error  0x%x"),error_code);      
     NRF_LOG_FLUSH();  
     

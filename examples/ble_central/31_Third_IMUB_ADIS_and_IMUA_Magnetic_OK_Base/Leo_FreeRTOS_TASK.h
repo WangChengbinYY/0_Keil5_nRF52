@@ -39,6 +39,8 @@ uint8_t vTask_CreatTask(void);
 //环形缓存区 存储数据    
 void ucCircleBuffer_SaveData(uint8_t const* pBuffer,uint16_t mSize);    
     
+uint8_t vTime_Seconds_Save(void);    
+    
 #ifdef __cplusplus
 }
 #endif

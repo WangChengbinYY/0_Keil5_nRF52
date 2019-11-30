@@ -261,7 +261,7 @@
 #endif
 
 // UWB   类型设定
-#define configUWB_INIT                              1                   /* 发起者：1；响应者：0 */
+#define configUWB_INIT                              0                   /* 发起者：1；响应者：0 */
 
 //--------管脚定义-----------------
 

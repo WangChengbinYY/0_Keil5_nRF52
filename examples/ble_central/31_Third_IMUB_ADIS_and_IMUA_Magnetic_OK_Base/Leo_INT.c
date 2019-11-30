@@ -33,15 +33,8 @@ extern uint8_t     G_GPSWeekSecond_IsValid;
 
 extern uint16_t    G_MicroSecond;
 
-extern uint8_t	    G_Time_Seconds[7]; 
-extern uint8_t	    G_Time_Seconds_IsReady;
-    
-extern uint8_t      G_IMUB_ADIS[4];
-extern uint8_t      G_IMUA_MPU92[4];
-extern uint8_t      G_IMUB_MPU92[4];
-
-extern uint8_t      G_IMUA_MPU92_Magnetic[4]; 
-
+extern uint8_t	    G_A0A0_Time_Seconds[7]; 
+extern uint8_t	    G_A0A0_Time_Seconds_IsReady;  
 
 extern TaskHandle_t xTaskHandle_SDCard_Close;         /*SDCard 关闭文件任务  句柄 */
 extern TaskHandle_t xTaskHandle_UWB_EventHandler;    
@@ -137,11 +130,7 @@ static void vINTHandler_IMUA(nrfx_gpiote_pin_t pin, nrf_gpiote_polarity_t actio)
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
     if(G_SDCard_FileIsOpen == 1)
     {
-        //记录IMUA接收数据时间
-        //memcpy(G_IMUA_MPU92+2,&G_MicroSecond,sizeof(G_MicroSecond));    
-        //仅存储磁强计数据
-        memcpy(G_IMUA_MPU92_Magnetic+2,&G_MicroSecond,sizeof(G_MicroSecond));    
-        
+       
         //通知任务进行数据采集
         BaseType_t xReturn = pdPASS;
         xReturn = xTaskNotifyFromISR(xTaskHandle_CollectData_IMUA,0,eSetValueWithoutOverwrite,&xHigherPriorityTaskWoken);
@@ -195,10 +184,8 @@ static void vINTHandler_IMUB(nrfx_gpiote_pin_t pin, nrf_gpiote_polarity_t actio)
     
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
     if(G_SDCard_FileIsOpen == 1)
-    {        
-        //记录IMUB接收数据时间
-        memcpy(G_IMUB_ADIS+2,&G_MicroSecond,sizeof(G_MicroSecond));    
-        //memcpy(G_IMUB_MPU92+2,&G_MicroSecond,sizeof(G_MicroSecond));            
+    {       
+        
         //通知任务进行数据采集
         BaseType_t xReturn = pdPASS;
         xReturn = xTaskNotifyFromISR(xTaskHandle_CollectData_IMUB,0,eSetValueWithoutOverwrite,&xHigherPriorityTaskWoken);
@@ -257,16 +244,16 @@ static void vINTHandler_PPS(nrfx_gpiote_pin_t pin, nrf_gpiote_polarity_t action)
         if(G_MicroSecond < 500)
         {
             G_MicroSecond = 0;
-            memcpy(G_Time_Seconds+2,&G_GPSWeekSecond,sizeof(G_GPSWeekSecond)); 
-            G_Time_Seconds[6] = 1;     //GPS的整秒计数
-            G_Time_Seconds_IsReady = 1;
+            memcpy(G_A0A0_Time_Seconds+2,&G_GPSWeekSecond,sizeof(G_GPSWeekSecond)); 
+            G_A0A0_Time_Seconds[6] = 1;     //GPS的整秒计数
+            G_A0A0_Time_Seconds_IsReady = 1;
         }else
         {
             G_MicroSecond = 0;
             G_GPSWeekSecond ++;       
-            memcpy(G_Time_Seconds+2,&G_GPSWeekSecond,sizeof(G_GPSWeekSecond)); 
-            G_Time_Seconds[6] = 1;     //GPS的整秒计数
-            G_Time_Seconds_IsReady = 1;            
+            memcpy(G_A0A0_Time_Seconds+2,&G_GPSWeekSecond,sizeof(G_GPSWeekSecond)); 
+            G_A0A0_Time_Seconds[6] = 1;     //GPS的整秒计数
+            G_A0A0_Time_Seconds_IsReady = 1;            
         }
         
         if(G_SDCard_FileIsOpen == 1)
