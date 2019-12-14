@@ -646,3 +646,48 @@ uint8_t ucIMU_INIT_IMUBOnly_MPU(void)
     
     return error_code;    
 }
+
+
+/**
+ 初始化 IMUA(MPU9250)only First板子,不使用IMUB(MPU9250)
+*/
+uint8_t ucIMU_INIT_IMUAOnly_MPU(void)
+{
+    //1.关闭IMUB
+    uint8_t error_code = 0;
+    
+    //直接将IMU_B(MPU92)的片选置高 
+    nrfx_gpiote_out_uninit(configGPIO_SPI_IMUB_nCS);  
+    nrfx_gpiote_out_config_t tconfigGPIO_OUT =  NRFX_GPIOTE_CONFIG_OUT_SIMPLE(true);
+    error_code |= nrfx_gpiote_out_init(configGPIO_SPI_IMUB_nCS,&tconfigGPIO_OUT);
+    nrfx_gpiote_out_set(configGPIO_SPI_IMUB_nCS);  //输出1  
+    nrf_delay_ms(10);    
+
+    //2.初始化 IMUA(MPU92)的SPI设置
+    nrf_drv_spi_config_t SPI_config = NRF_DRV_SPI_DEFAULT_CONFIG;
+	SPI_config.sck_pin 			= configGPIO_SPI_CollectData_SCK;
+	SPI_config.mosi_pin 		= configGPIO_SPI_CollectData_MOSI;
+	SPI_config.miso_pin 		= configGPIO_SPI_CollectData_MISO;   
+    SPI_config.ss_pin			= configGPIO_SPI_IMUA_nCS;               //不设定片选管脚
+	SPI_config.irq_priority	    = SPI_DEFAULT_CONFIG_IRQ_PRIORITY;		//系统SPI中断权限默认设定为 7 
+	SPI_config.orc				= 0xFF;
+	SPI_config.frequency		= NRF_DRV_SPI_FREQ_1M;		        
+	SPI_config.mode             = NRF_DRV_SPI_MODE_3;                     
+    SPI_config.bit_order        = NRF_DRV_SPI_BIT_ORDER_MSB_FIRST;	    
+
+    error_code |= nrf_drv_spi_init(&SPI_CollectData, &SPI_config, NULL,NULL);
+    nrf_delay_ms(2);       
+    
+    //3.初始化 IMUA(MPU9250)
+    G_A1A1_A2A2_MAG_Coeffi[0] = 0xA1;     //IMUA的磁强计校正参数
+    G_A1A1_A2A2_MAG_Coeffi[1] = 0xA1;  
+    error_code |= Leo_MPU9255_INIT();    
+    //记录磁强计参数
+    ucCircleBuffer_SaveData(G_A1A1_A2A2_MAG_Coeffi,sizeof(G_A1A1_A2A2_MAG_Coeffi));  
+    NRF_LOG_INFO(("||Initialize||-->IMU_A(U4)------->error  0x%x"),error_code);  
+    
+    return error_code;    
+}
+
+
+

@@ -132,10 +132,7 @@ static void vINTHandler_IMUA(nrfx_gpiote_pin_t pin, nrf_gpiote_polarity_t actio)
 
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
     if(G_SDCard_FileIsOpen == 1)
-    {
-        //记录IMUA接收数据时间
-        memcpy(G_B3B3_Magnetic_IMUAMPU+2,&G_MicroSecond,sizeof(G_MicroSecond));    
-        
+    {  
         //通知任务进行数据采集
         BaseType_t xReturn = pdPASS;
         xReturn = xTaskNotifyFromISR(xTaskHandle_CollectData_IMUA,0,eSetValueWithoutOverwrite,&xHigherPriorityTaskWoken);
@@ -189,9 +186,7 @@ static void vINTHandler_IMUB(nrfx_gpiote_pin_t pin, nrf_gpiote_polarity_t actio)
     
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
     if(G_SDCard_FileIsOpen == 1)
-    {        
-        //记录IMUB(MPU92)接收数据时间
-        memcpy(G_B4B4_IMUB_MPU_Pressure+2,&G_MicroSecond,sizeof(G_MicroSecond));               
+    {      
         //通知任务进行数据采集
         BaseType_t xReturn = pdPASS;
         xReturn = xTaskNotifyFromISR(xTaskHandle_CollectData_IMUB,0,eSetValueWithoutOverwrite,&xHigherPriorityTaskWoken);

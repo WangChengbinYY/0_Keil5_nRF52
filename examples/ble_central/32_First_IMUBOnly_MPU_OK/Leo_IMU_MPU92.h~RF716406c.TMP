@@ -118,10 +118,10 @@ extern "C" {
 #define MPU9255_PWR_MGMT_2_GYRO_XYZ						(0x00)		//[2:0]	0x07 – 关闭所有陀螺
 																												//			0x00 – 打开所有陀螺		
 																												
-#define MPU9255_GYRO_CONFIG_FS							(0x18)		//[4:3]	0x10 – 陀螺仪量程参数		0x00:+/-250; 0x08:+/-500; 0x10:+/-1000; 0x18:+/-2000
+#define MPU9255_GYRO_CONFIG_FS							(0x10)		//[4:3]	0x10 – 陀螺仪量程参数		0x00:+/-250; 0x08:+/-500; 0x10:+/-1000; 0x18:+/-2000
 #define MPU9255_GYRO_CONFIG_Fb							(0x00)		//[1:0]	0x00 – 陀螺仪 Fchoice_b 的参数 和 DLPF_CFG 配合设置 陀螺和温度计的 数字低通滤波参数
 
-#define MPU9255_ACCEL_CONFIG1_FS						(0x18)		//[4:3]:0x10 – 加表量程	0x00:+/-2G; 0x08:+/-4G; 0x10:+/-8G; 0x18:+/-16G	
+#define MPU9255_ACCEL_CONFIG1_FS						(0x10)		//[4:3]:0x10 – 加表量程	0x00:+/-2G; 0x08:+/-4G; 0x10:+/-8G; 0x18:+/-16G	
 
 #define MPU9255_ACCEL_CONFIG2_FCHOICE_B				    (0x00)		//[3]:	0x00 – 使得 ACCEL_FCHOICE 为 1 ，结合 DLPFCFG 设定加速度计的DLPF
 #define MPU9255_ACCEL_CONFIG2_DLPFCFG					(0x01)		//[2:0]:0xxx – 加速度计数字低通滤波参数：0x00(460Hz Band,1.94ms Delay,1kHz Fs);0x01(184Hz,5.8ms,1kHz);0x02(92Hz,7.8ms,1kHz)
@@ -315,10 +315,7 @@ uint8_t ucIMU_INIT_IMUAB_MPU(void);
 */
 uint8_t ucIMU_INIT_IMUBOnly_MPU(void);
     
-/**
- 初始化 IMUA(MPU9250)only First板子
-*/
-uint8_t ucIMU_INIT_IMUAOnly_MPU(void);	
+	
 #ifdef __cplusplus
 }
 #endif

@@ -20,6 +20,7 @@
 
 //全局变量_参数相关_SDCard文件操作标识                                                         
 uint8_t     G_SDCard_FileIsOpen;           //标记是否已经打开文件 没打开，默认为0
+uint8_t     G_UWB_Time;                    //UWB的采样频率 是 IMU的几倍 2
 
 //全局变量_参数相关_时间 
 uint32_t    G_GPSWeekSecond;                   //GPS周内秒数据
@@ -129,6 +130,7 @@ void vINIT_Variable(void)
 {
 //全局变量_参数相关_SDCard文件操作标识                                                         
     G_SDCard_FileIsOpen = 0;           //标记是否已经打开文件 没打开，默认为0
+    G_UWB_Time = 0;
 
 //全局变量_参数相关_时间 
     G_GPSWeekSecond = 0;                   //GPS周内秒数据
@@ -475,32 +477,13 @@ static void vTask_GPSData_Decode(void *pvParameters)
                         if(xSemaphoreTake( xMutex_SDCard_CirBuffer, ( TickType_t ) 50 ) == pdTRUE)
                         {      
                             G_GPSWeekSecond = mGGA.time.hours*3600+mGGA.time.minutes*60+mGGA.time.seconds;
-                            
-                            //第一次获取GPS时间  直接存储时间数据                          
-                            if(G_GPSWeekSecond_IsValid == 0)
-                            {
-                                G_GPSWeekSecond_IsValid = 1;
-                                //直接存储当前GPS时间
-                                memcpy(G_A0A0_Time_Seconds+2,&G_GPSWeekSecond,sizeof(G_GPSWeekSecond)); 
-                                ucCircleBuffer_SaveData(G_A0A0_Time_Seconds,sizeof(G_A0A0_Time_Seconds));  
-                                G_A0A0_Time_Seconds_IsReady = 0;   
-                            }
 
-                            //不是第一次获取GPS时间，先判断是否需要存储时间数据
-                            if(G_A0A0_Time_Seconds_IsReady == 1)
-                            {
-                                //防止缓存溢出   
-                                if((sizeof(G_A0A0_Time_Seconds)+G_SDCard_CB_Counter) <= configSDCard_BufferSize)
-                                {
-                                    ucCircleBuffer_SaveData(G_A0A0_Time_Seconds,sizeof(G_A0A0_Time_Seconds));  
-                                    G_A0A0_Time_Seconds_IsReady = 0;
-                                }else
-                                {
-                                    //丢包
-                                    NRF_LOG_INFO("  SDCard Buffer is OverFlow_G_A0A0_Time_Seconds!");
-                                    NRF_LOG_FLUSH();
-                                } 
-                            }                            
+                            G_GPSWeekSecond_IsValid = 1;
+                            //直接存储当前GPS时间
+                            memcpy(G_A0A0_Time_Seconds+2,&G_GPSWeekSecond,sizeof(G_GPSWeekSecond)); 
+                            ucCircleBuffer_SaveData(G_A0A0_Time_Seconds,sizeof(G_A0A0_Time_Seconds));  
+                            G_A0A0_Time_Seconds_IsReady = 0;   
+                   
                         
                             //再存储GPS数据
                             if((sizeof(G_C2C2_GPS)+G_SDCard_CB_Counter) <= configSDCard_BufferSize)
@@ -528,73 +511,95 @@ static void vTask_GPSData_Decode(void *pvParameters)
 
 
 /*------------------------------------------------------------
- *  IMUA(U4) 采集MPU9255  读取全部数据，但仅存储Magnetic数据
+ *  IMUA(U4) 采集MPU9255
  *------------------------------------------------------------*/
 static void vTask_CollectData_IMUA(void *pvParameters)
 {
-//    uint8_t error_IMUA = 0;
-//    uint8_t tIMUA_MPU92_Data[22] = {0};
-//    while(1)
-//    {
-//        xTaskNotifyWait(0x00000000,0xFFFFFFFF,NULL,portMAX_DELAY);               
-//        
-//        //等待 共用SPI互斥量的释放
-//        if(xSemaphoreTake( xMutex_SDCard_CirBuffer, ( TickType_t ) 4 ) == pdTRUE)
-//        {   
-//            //采集IMUA MPU92数据 不能单独采集磁强计，因此，将所有数据全部采集
-//            nrfx_gpiote_out_clear(configGPIO_SPI_IMUA_nCS); 
-//            nrf_delay_us(2);
-//            error_IMUA = Leo_MPU9255_Read_ALLData(tIMUA_MPU92_Data);     
-//            nrfx_gpiote_out_set(configGPIO_SPI_IMUA_nCS);                    
-//            
-//            //如果采集正确 则存入缓存 
-//            if(error_IMUA == 0)
-//            {   
-//                //先存储时间数据
-//                if(G_A0A0_Time_Seconds_IsReady == 1)
-//                {  
-//                    //防止缓存溢出   
-//                    if((sizeof(G_A0A0_Time_Seconds)+G_SDCard_CB_Counter) <= configSDCard_BufferSize)
-//                    {   
-//                        ucCircleBuffer_SaveData(G_A0A0_Time_Seconds,sizeof(G_A0A0_Time_Seconds));  
-//                        G_A0A0_Time_Seconds_IsReady = 0;
-//                    }else
-//                    {
-//                        //丢包
-//                        NRF_LOG_INFO("  SDCard Buffer is OverFlow_G_A0A0_Time_Seconds!");
-//                        NRF_LOG_FLUSH();
-//                    } 
-//                }
-//                
-//                //存储磁强计数据           
-//                if((26+G_SDCard_CB_Counter) <= configSDCard_BufferSize)   //判断缓存是否溢出
-//                {
-//                    //存储  磁强计数据 头标识和时间
-//                    ucCircleBuffer_SaveData(G_IMUA_MPU92_Magnetic,sizeof(G_IMUA_MPU92_Magnetic));    
-//                    ucCircleBuffer_SaveData(tIMUA_MPU92_Data+15,6);                    
-//                }else
-//                {
-//                    //丢包
-//                    NRF_LOG_INFO("  SDCard Buffer is OverFlow_IMUA_Data!");
-//                    NRF_LOG_FLUSH();
-//                }                 
-//                
-//            }else
+    uint8_t erro_IMUA = 0;
+    uint8_t tIMUA_MPU_Data[22] = {0};
+	nrf_saadc_value_t tSAResult[4] = {0}; 
+    
+    while(1)
+    {
+        xTaskNotifyWait(0x00000000,0xFFFFFFFF,NULL,portMAX_DELAY); 
+   
+        //等待 共用SPI互斥量的释放
+        if(xSemaphoreTake( xMutex_SDCard_CirBuffer, ( TickType_t ) 4 ) == pdTRUE)
+        { 
+            //采集IMUB MPU92数据
+            erro_IMUA = Leo_MPU9255_Read_ALLData(tIMUA_MPU_Data);
+            
+            //采集压力传感器 AD 数据
+            nrfx_saadc_sample_convert(0,tSAResult);
+            nrfx_saadc_sample_convert(1,tSAResult+1);        
+            nrfx_saadc_sample_convert(2,tSAResult+2);  
+            nrfx_saadc_sample_convert(3,tSAResult+3);  
+            
+            //如果采集正确 则存入缓存 
+            if(erro_IMUA == 0)
+            {
+                //先存储时间数据
+                vTime_Seconds_Save();
+                
+                //再存入 IMUB数据包 28个字节                
+                if((28+G_SDCard_CB_Counter) <= configSDCard_BufferSize)   //判断缓存是否溢出
+                {
+                    //存入 头标识和时间
+                    memcpy(G_B1B1_IMUA_MPU_Pressure+2,&G_MicroSecond_Saved,sizeof(G_MicroSecond_Saved));
+                    ucCircleBuffer_SaveData(G_B1B1_IMUA_MPU_Pressure,sizeof(G_B1B1_IMUA_MPU_Pressure));
+                    //存入 IMUB数据                    
+                    ucCircleBuffer_SaveData(tIMUA_MPU_Data,sizeof(tIMUA_MPU_Data));                      
+                    //存入 压力数据                    
+                    ucCircleBuffer_SaveData((uint8_t *)tSAResult,sizeof(tSAResult));    
+                }else
+                {
+                    //丢包
+                    NRF_LOG_INFO("  SDCard Buffer is OverFlow_IMUB_Data!");
+                    NRF_LOG_FLUSH();
+                }                 
+                
+            }else
+            {
+                //IMUB 数据采集错误
+                NRF_LOG_INFO("  IMU_B CellectData is Wrong!");
+                NRF_LOG_FLUSH();                   
+            }   
+            
+#if configUWB_INIT             
+            //UWB测距启动
+//            G_UWB_Time = G_UWB_Time+1;
+//            if (G_UWB_Time == 2)
 //            {
-//                //IMUB 数据采集错误
-//                NRF_LOG_INFO("  IMU_A CellectData is Wrong!");
-//                NRF_LOG_FLUSH();                   
-//            }   
-//           
-//            //释放资源
-//            xSemaphoreGive( xMutex_SDCard_CirBuffer );     
-//        }else
-//        {
-//            NRF_LOG_INFO("  xMutex_SDCDBuffer IMUA TimeOUT");
-//            NRF_LOG_FLUSH();
-//        }  
-//        
-//	}
+//                G_UWB_Time = 0;
+                if(G_SDCard_CB_Counter < configSDCard_SaveSize)
+                {
+                    vSS_INIT_Start();   
+                }                
+//            }
+#endif 
+            
+            //释放资源
+            xSemaphoreGive( xMutex_SDCard_CirBuffer );   
+            
+            //若是数据量到了，通知SDCard进行存储
+            if(G_SDCard_CB_Counter >= configSDCard_SaveSize)
+            {               
+                //通知 SDCard存储
+                BaseType_t xReturn = pdPASS;
+                xReturn = xTaskNotify(xTaskHandle_SDCard_Save,0,eSetValueWithoutOverwrite);  
+                if(xReturn == pdFAIL)
+                {
+                    //SDCard 通知存储失败
+                    NRF_LOG_INFO("  xTaskNotify_SDCard is Wrong!");
+                    NRF_LOG_FLUSH();
+                }
+            }                        
+        }else
+        {
+            NRF_LOG_INFO("  xMutex_SDCDBuffer IMUA TimeOUT");
+            NRF_LOG_FLUSH();
+        }  
+    }        
 }
 
 
@@ -656,10 +661,15 @@ static void vTask_CollectData_IMUB(void *pvParameters)
             
 #if configUWB_INIT             
             //UWB测距启动
-            if(G_SDCard_CB_Counter < configSDCard_SaveSize)
-            {
-                vSS_INIT_Start();   
-            }                
+//            G_UWB_Time = G_UWB_Time+1;
+//            if (G_UWB_Time == 2)
+//            {
+//                G_UWB_Time = 0;
+                if(G_SDCard_CB_Counter < configSDCard_SaveSize)
+                {
+                    vSS_INIT_Start();   
+                }                
+//            }
 #endif 
             
             //释放资源
@@ -746,29 +756,29 @@ static void vTask_TaskStart(void *pvParameters)
     }   
     
     //(5) 建立IMUA 主采集任务  
-//    txResult = xTaskCreate(vTask_CollectData_IMUA,
-//                           "CollData_IMUA",
-//                           configMINIMAL_STACK_SIZE+256,
-//                           NULL,
-//                           taskPRIO_CollectData_IMUA,
-//                           &xTaskHandle_CollectData_IMUA);
-//    if(txResult != pdPASS)
-//    {
-//       erro_code = 1;
-//    }     
-    
-    
-    //(6) 建立IMUB 采集任务  
-    txResult = xTaskCreate(vTask_CollectData_IMUB,
-                           "CollData_IMUB",
+    txResult = xTaskCreate(vTask_CollectData_IMUA,
+                           "CollData_IMUA",
                            configMINIMAL_STACK_SIZE+128,
                            NULL,
-                           taskPRIO_CollectData_IMUB,
-                           &xTaskHandle_CollectData_IMUB);
+                           taskPRIO_CollectData_IMUA,
+                           &xTaskHandle_CollectData_IMUA);
     if(txResult != pdPASS)
     {
        erro_code = 1;
     }     
+    
+    
+    //(6) 建立IMUB 采集任务  
+//    txResult = xTaskCreate(vTask_CollectData_IMUB,
+//                           "CollData_IMUB",
+//                           configMINIMAL_STACK_SIZE+128,
+//                           NULL,
+//                           taskPRIO_CollectData_IMUB,
+//                           &xTaskHandle_CollectData_IMUB);
+//    if(txResult != pdPASS)
+//    {
+//       erro_code = 1;
+//    }     
     
       
     
@@ -800,7 +810,8 @@ static void vTask_TaskStart(void *pvParameters)
     erro_code |= nrfx_gpiote_out_init(configGPIO_LED_R,&tconfigGPIO_OUT);
     nrfx_gpiote_out_set(configGPIO_LED_R);  //输出1，LED灯灭    
     NRF_LOG_INFO(("||Initialize||-->LED----------->error  0x%x"),erro_code);
-    NRF_LOG_FLUSH();    
+    NRF_LOG_FLUSH();      
+    
     
     //（3） 初始化SDCard 并建立存储文件  
     erro_code |= ucSDCard_INIT();  
@@ -812,7 +823,11 @@ static void vTask_TaskStart(void *pvParameters)
     NRF_LOG_FLUSH(); 
  
     //（4） 初始化 IMUB(MPU92)only——First板子 
-    erro_code |= ucIMU_INIT_IMUBOnly_MPU(); 
+//    erro_code |= ucIMU_INIT_IMUBOnly_MPU(); 
+//    NRF_LOG_INFO(("||Initialize||-->IMUA(MPU)_IMUB(ADIS)->error  0x%x"),erro_code);  
+    
+    //（4） 初始化 IMUA(MPU92)only——First板子 
+    erro_code |= ucIMU_INIT_IMUAOnly_MPU(); 
     NRF_LOG_INFO(("||Initialize||-->IMUA(MPU)_IMUB(ADIS)->error  0x%x"),erro_code);  
     
     //（5） 初始化 SAADC 压力传感器
@@ -842,13 +857,13 @@ static void vTask_TaskStart(void *pvParameters)
     erro_code |= ucINTInital_SDCard();    /* SDCard中断管脚初始化 */    
     erro_code |= ucINTInital_PPS();       /* 1PPS秒脉冲中断管脚初始化 */
     erro_code |= ucINTInital_UWB();
-    //erro_code |= ucINTInital_IMUA();
-    erro_code |= ucINTInital_IMUB();
+    erro_code |= ucINTInital_IMUA();
+    //erro_code |= ucINTInital_IMUB();
     ucINTStart_SDCard();
     ucINTStart_PPS();
     ucINTStart_UWB();
-    //ucINTStart_IMUA();
-    ucINTStart_IMUB();
+    ucINTStart_IMUA();
+    //ucINTStart_IMUB();
     NRF_LOG_INFO(("||Initialize||-->INT----------->error  0x%x"),erro_code);   
     NRF_LOG_FLUSH(); 
     

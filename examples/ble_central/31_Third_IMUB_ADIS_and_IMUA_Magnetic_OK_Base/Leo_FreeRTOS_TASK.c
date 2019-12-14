@@ -20,6 +20,7 @@
 
 //全局变量_参数相关_SDCard文件操作标识                                                         
 uint8_t     G_SDCard_FileIsOpen;           //标记是否已经打开文件 没打开，默认为0
+uint8_t     G_UWB_Time;  
 
 //全局变量_参数相关_时间 
 uint32_t    G_GPSWeekSecond;                   //GPS周内秒数据
@@ -129,6 +130,7 @@ void vINIT_Variable(void)
 {
 //全局变量_参数相关_SDCard文件操作标识                                                         
     G_SDCard_FileIsOpen = 0;           //标记是否已经打开文件 没打开，默认为0
+    G_UWB_Time = 0;
 
 //全局变量_参数相关_时间 
     G_GPSWeekSecond = 0;                   //GPS周内秒数据
@@ -478,23 +480,12 @@ static void vTask_GPSData_Decode(void *pvParameters)
                         if(xSemaphoreTake( xMutex_SDCard_CirBuffer, ( TickType_t ) 50 ) == pdTRUE)
                         {      
                             G_GPSWeekSecond = mGGA.time.hours*3600+mGGA.time.minutes*60+mGGA.time.seconds;
-                            
-                            //第一次获取GPS时间  直接存储时间数据                          
-                            if(G_GPSWeekSecond_IsValid == 0)
-                            {
-                                G_GPSWeekSecond_IsValid = 1;
-                                //直接存储当前GPS时间
-                                memcpy(G_A0A0_Time_Seconds+2,&G_GPSWeekSecond,sizeof(G_GPSWeekSecond)); 
-                                ucCircleBuffer_SaveData(G_A0A0_Time_Seconds,sizeof(G_A0A0_Time_Seconds));  
-                                G_A0A0_Time_Seconds_IsReady = 0;   
-                            }
 
-                            //不是第一次获取GPS时间，先判断是否需要存储时间数据
-                            if(G_A0A0_Time_Seconds_IsReady == 1)
-                            {
-                                //防止缓存溢出   
-                                vTime_Seconds_Save();
-                            }                            
+                            G_GPSWeekSecond_IsValid = 1;
+                            //直接存储当前GPS时间
+                            memcpy(G_A0A0_Time_Seconds+2,&G_GPSWeekSecond,sizeof(G_GPSWeekSecond)); 
+                            ucCircleBuffer_SaveData(G_A0A0_Time_Seconds,sizeof(G_A0A0_Time_Seconds));  
+                            G_A0A0_Time_Seconds_IsReady = 0;                              
                         
                             //再存储GPS数据
                             if((sizeof(G_C2C2_GPS)+G_SDCard_CB_Counter) <= configSDCard_BufferSize)
@@ -643,10 +634,15 @@ static void vTask_CollectData_IMUB(void *pvParameters)
             
 #if configUWB_INIT             
             //UWB测距启动
-            if(G_SDCard_CB_Counter < configSDCard_SaveSize)
+            G_UWB_Time = G_UWB_Time+1;
+            if (G_UWB_Time == 2)
             {
-                vSS_INIT_Start();   
-            }                
+                G_UWB_Time = 0;
+                if(G_SDCard_CB_Counter < configSDCard_SaveSize)
+                {
+                    vSS_INIT_Start();   
+                }    
+            }            
 #endif 
             
             //释放资源
